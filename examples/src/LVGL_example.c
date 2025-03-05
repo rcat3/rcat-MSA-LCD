@@ -74,7 +74,7 @@ static void encoder_read_cb(lv_indev_drv_t * drv, lv_indev_data_t*data);
 static void dma_handler(void);
 static bool repeating_lvgl_timer_callback(struct repeating_timer *t);
 static bool repeating_battery_timer_callback(struct repeating_timer *t);
-static void add_pic_tile(lv_obj_t *tv, const lv_img_dsc_t *pic, uint8_t num);
+static void add_pic_tile(lv_obj_t *tv, const lv_img_dsc_t *pic, uint8_t num, bool is_gif);
 static void brightness_slider_event_cb(lv_event_t * e);
 
 static uint16_t img_rotation = 0;
@@ -141,19 +141,21 @@ void Widgets_Init(void)
     lv_group_add_obj(group, tv);
 
     //extern const uint8_t num_imgs;
-    const uint8_t num_imgs = 4;
+    const uint8_t num_imgs = 5;
 
     LV_IMG_DECLARE(home);
     LV_IMG_DECLARE(RCatLogo);
     LV_IMG_DECLARE(nonbinary);
     LV_IMG_DECLARE(hal9000);
+    LV_IMG_DECLARE(evileye);
     LV_IMG_DECLARE(black);
 
-    add_pic_tile(tv, &home, 0);
-    add_pic_tile(tv, &RCatLogo, 1);
-    add_pic_tile(tv, &nonbinary, 2);
-    add_pic_tile(tv, &hal9000, 3);
-    add_pic_tile(tv, &black, 4);
+    add_pic_tile(tv, &home, 0, false);
+    add_pic_tile(tv, &RCatLogo, 1, false);
+    add_pic_tile(tv, &nonbinary, 2, false);
+    add_pic_tile(tv, &hal9000, 3, false);
+    add_pic_tile(tv, &evileye, 4, true);
+    add_pic_tile(tv, &black, 5, false);
 
     // ---------------------------
     // Brightness tile.
@@ -235,9 +237,10 @@ static void rotation_roller_event_cb(lv_event_t * e)
 }
 
 
-static void add_pic_tile(lv_obj_t *tv, const lv_img_dsc_t *pic, uint8_t num)
+static void add_pic_tile(lv_obj_t *tv, const lv_img_dsc_t *pic, uint8_t num, bool is_gif)
 {
         lv_dir_t tile_direction;
+        lv_obj_t *this_img;
 
         // Figure out the scroll direction for a new tile.
         if (num == 0)
@@ -255,10 +258,24 @@ static void add_pic_tile(lv_obj_t *tv, const lv_img_dsc_t *pic, uint8_t num)
         lv_obj_t *this_tile = lv_tileview_add_tile(tv, 0, num, tile_direction);
 
         // Add an image to the tile.
-        lv_obj_t *this_img = lv_img_create(this_tile);
-        lv_img_set_src(this_img, pic);
+        if (is_gif)
+        {
+            this_img = lv_gif_create(this_tile);
+            lv_gif_set_src(this_img, pic);
+        }
+        else
+        {
+            this_img = lv_img_create(this_tile);
+            lv_img_set_src(this_img, pic);
+        }
+
+
         lv_obj_align(this_img, LV_ALIGN_CENTER, 0, 0);
-        lv_img_set_angle(this_img, img_rotation);
+
+        if (!is_gif)
+        {
+            lv_img_set_angle(this_img, img_rotation);
+        }
 
 }
 
