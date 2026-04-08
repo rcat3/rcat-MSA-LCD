@@ -52,6 +52,8 @@ int LCD_1in28_LVGL_Test(void)
 
     while(1)
     {
+      //lv_tick_inc(5);
+      lv_timer_handler();
       lv_task_handler();
       DEV_Delay_ms(5);
     }

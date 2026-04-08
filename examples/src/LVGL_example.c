@@ -36,8 +36,8 @@
 
 // LVGL
 static lv_disp_draw_buf_t disp_buf;
-static lv_color_t buf0[DISP_HOR_RES * DISP_VER_RES/2];
-static lv_color_t buf1[DISP_HOR_RES * DISP_VER_RES/2];
+#define DRAW_BUF_LINES 10
+static lv_color_t buf0[DISP_HOR_RES * DRAW_BUF_LINES];
 static lv_disp_drv_t disp_drv;
 static lv_disp_t *disp;
 
@@ -76,6 +76,7 @@ static bool repeating_lvgl_timer_callback(struct repeating_timer *t);
 static bool repeating_battery_timer_callback(struct repeating_timer *t);
 static void add_pic_tile(lv_obj_t *tv, const lv_img_dsc_t *pic, uint8_t num, bool is_gif);
 static void brightness_slider_event_cb(lv_event_t * e);
+static void add_black_tile(lv_obj_t *tv, uint8_t num);
 
 static uint16_t img_rotation = 0;
 
@@ -95,7 +96,7 @@ void LVGL_Init(void)
     lv_init();
 
     // /*3.Init LVGL display*/
-    lv_disp_draw_buf_init(&disp_buf, buf0, buf1, DISP_HOR_RES * DISP_VER_RES / 2);
+    lv_disp_draw_buf_init(&disp_buf, buf0, NULL, DISP_HOR_RES * DRAW_BUF_LINES);
     lv_disp_drv_init(&disp_drv);
     disp_drv.flush_cb = disp_flush_cb;
     disp_drv.draw_buf = &disp_buf;
@@ -148,14 +149,13 @@ void Widgets_Init(void)
     LV_IMG_DECLARE(nonbinary);
     LV_IMG_DECLARE(hal9000);
     LV_IMG_DECLARE(evileye);
-    LV_IMG_DECLARE(black);
 
     add_pic_tile(tv, &home, 0, false);
     add_pic_tile(tv, &RCatLogo, 1, false);
     add_pic_tile(tv, &nonbinary, 2, false);
     add_pic_tile(tv, &hal9000, 3, false);
     add_pic_tile(tv, &evileye, 4, true);
-    add_pic_tile(tv, &black, 5, false);
+    add_black_tile(tv, 5);
 
     // ---------------------------
     // Brightness tile.
@@ -256,6 +256,9 @@ static void add_pic_tile(lv_obj_t *tv, const lv_img_dsc_t *pic, uint8_t num, boo
 
         // Add a tile...
         lv_obj_t *this_tile = lv_tileview_add_tile(tv, 0, num, tile_direction);
+
+        lv_obj_set_style_bg_color(this_tile, lv_color_black(), 0);
+        lv_obj_set_style_bg_opa(this_tile, LV_OPA_COVER, 0);
 
         // Add an image to the tile.
         if (is_gif)
@@ -372,4 +375,20 @@ static bool repeating_battery_timer_callback(struct repeating_timer *t)
     sprintf(label_text, "Battery: %.2fV", result * conversion_factor);
     lv_label_set_text(label_battery, label_text);
     return true;
+}
+
+
+static void add_black_tile(lv_obj_t *tv, uint8_t num)
+{
+    lv_dir_t tile_direction;
+
+    if (num == 0) {
+        tile_direction = LV_DIR_BOTTOM;
+    } else {
+        tile_direction = LV_DIR_TOP | LV_DIR_BOTTOM;
+    }
+
+    lv_obj_t *this_tile = lv_tileview_add_tile(tv, 0, num, tile_direction);
+    lv_obj_set_style_bg_color(this_tile, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(this_tile, LV_OPA_COVER, 0);
 }

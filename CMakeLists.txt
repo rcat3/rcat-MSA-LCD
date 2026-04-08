@@ -47,8 +47,8 @@ add_executable(rcat-msa-lcd main.c)
 pico_set_program_name(rcat-msa-lcd  "rcat-msa-lcd")
 pico_set_program_version(rcat-msa-lcd "0.1")
 
-pico_enable_stdio_uart(rcat-msa-lcd 1)
-pico_enable_stdio_usb(rcat-msa-lcd  0)
+pico_enable_stdio_uart(rcat-msa-lcd 0)
+pico_enable_stdio_usb(rcat-msa-lcd  1)
 
 # Add the standard library to the build
 
