@@ -1,0 +1,2 @@
+/usr/bin/ar qc libexamples.a CMakeFiles/examples.dir/ImageData.o CMakeFiles/examples.dir/LCD_1in28_LVGL_test.o CMakeFiles/examples.dir/LVGL_example.o CMakeFiles/examples.dir/RCatLogo.o CMakeFiles/examples.dir/black.o CMakeFiles/examples.dir/evileye.o CMakeFiles/examples.dir/hal9000.o CMakeFiles/examples.dir/home.o CMakeFiles/examples.dir/img_bulb_gif.o CMakeFiles/examples.dir/img_bulb_gif.tweaked.o CMakeFiles/examples.dir/nonbinary.o CMakeFiles/examples.dir/radar.o
+/usr/bin/ranlib libexamples.a
