@@ -21,7 +21,7 @@ Other things you'll need:
 
 I created this project because I was having trouble with all of the other existing projects intended for this hardware.  They all failed to initialize the touch screen over I2C or were otherwise unreliable on my hardware.  The Waveshare example projects seemed to work fine, though.  Therefore, I just hacked this together from the [Waveshare example project that uses the LVGL GUI library](https://www.waveshare.com/wiki/RP2040-Touch-LCD-1.28#LVGL_Example_Demo).  The LVGL library opens up a lot of cool possibilities for effects if you want to spend the time working with it.  Take a look at the [LVGL documentation](https://docs.lvgl.io/8.1/) to get an idea of what it's capable of.  The original demo can be downloaded from [this link](https://files.waveshare.com/upload/1/16/RP2040-Touch-LCD-1.28-LVGL.zip).
 
-My implementation focuses on displaying static images.  You can swipe up/down to change images.  The last few tiles in the sequence allow you to adjust the LCD brightness, view the battery voltage, and rotate the images.  Image rotation might be helpful if you're having trouble orienting the LCD display properly in the MSA's VPU threads.
+My implementation originally focused on displaying static images, but it now supports small animated GIFs as well.  You can swipe up/down to change images.  The last few tiles in the sequence allow you to adjust the LCD brightness, view the battery voltage, and rotate the images.  Image rotation might be helpful if you're having trouble orienting the LCD display properly in the MSA's VPU threads.
 
 If you want to change the images, you'll need to rebuild the software image and reflash the device.
 
@@ -52,11 +52,38 @@ Connect the USB-C port of the RP2040 to your computer.  To flash a new image ont
 
 ### Converting the image
 
-All images must be converted to C arrays that get incorporated into the source code.  Use the [LVGL Image Converter](https://lvgl.io/tools/imageconverter) to convert the images.  The image dimensions should be 240x240.
+All images must be converted to C arrays that get incorporated into the source code.  Use the [LVGL Image Converter](https://lvgl.io/tools/imageconverter) to convert the images.  The image dimensions should be 240x240 or less.
+
+#### For Static Images
 
 1. In the image converter, select *LVGL v8*.
 2. Click *Select image file(s)* and navigate to your desired image.
 3. For *Color Format*, select *CF_TRUE_COLOR*.
+4. Output format should be *C array*.
+5. Leave the boxes unchecked.  
+6. Click *Convert*.  The converted image will download automatically.
+7. Copy the downloaded .c file to `examples/src`.
+
+#### For Animated GIFs
+
+The hardware is extremely limited in terms of available memory.  Total SRAM is only 264kB.  There are animated GIFs that are larger than that.  They obviously won't work.  The biggest factors in predicting whether an animated GIF will work are it's resolution and color depth.  Per the [LVGL documentation regarding GIF decoding](https://docs.lvgl.io/8.3/libs/gif.html), memory requirements are:
+
+- 8 bit color depth: 3 x image width x image height
+- 16 bit color depth: 4 x image width x image height
+- 32 bit color depth: 5 x image width x image height
+
+Here are some rough (untested) guidelines based on the above requirements:
+- up to ~60kB: Probably okay.
+- ~60kB-100kB: Starting to get questionable.
+- over 134kB: Risky / Likely to crash depending on rest of app.
+
+Needless to say, you won't be able to fill the 240x240 screen.  If you flash a new image and it doesn't start running as expected, you've likely encountered a memory allocation error.  Reduce the size of your animated GIF and try again.  The limits are obviously also
+dependent on how many other pictures you're trying to compile in.
+
+To [convert an animated GIF](https://lvgl.io/tools/imageconverter) for use in the program:
+1. In the image converter, select *LVGL v8*.
+2. Click *Select image file(s)* and navigate to your desired image.
+3. For *Color Format*, select *CF_RAW*.
 4. Output format should be *C array*.
 5. Leave the boxes unchecked.  
 6. Click *Convert*.  The converted image will download automatically.
@@ -67,8 +94,8 @@ All images must be converted to C arrays that get incorporated into the source c
 1. Edit `LVGL_example.c` to add your image (or replace an existing image).
 2. Find the `Widgets_Init()` function around [line 144](https://github.com/rcat3/rcat-MSA-LCD/blob/master/examples/src/LVGL_example.c#L144).
 3. If you're adding an image, increment `num_imgs` as necessary.  If you're replacing an image, you can leave it as is.  If you're removing an image, decrement `num_imgs`.
-4. Add calls for your image.  You should add the following two lines to their respective groups.  Substitute `your_image` for your image name.  Pick an appropriate number for the third parameter in `add_pic_tile()`.  Each call should have it's own unique number (in order).
+4. Add calls for your image.  You should add the following two lines to their respective groups.  Substitute `your_image` for your image name.  Pick an appropriate number for the third parameter in `add_pic_tile()`.  Each call should have it's own unique number (in order).  The fourth parameter for `add_pic_tile()` indicates whether the image you're adding is an animated GIF or not.  Set to false for a static image.  Set to true for an animated GIF.
 ```
 LV_IMG_DECLARE(your_image);
-add_pic_tile(tv, &your_image, 5);
+add_pic_tile(tv, &your_image, 5, false);
 ```
