@@ -2,6 +2,8 @@
 
 ## Hardware
 
+This project now supports both the [Waveshare RP2040-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0C4LRRVVN) as well as the [Waveshare RP2350-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0DLBF5QKK).  The RP2040 version has 264kB of SRAM while the RP2350 version has 520kB.  They're about the same price, so I'd recommend just getting the RP2350 version.  This is especially true if you're interested in displaying animated GIFs.  GIFs are very memory intensive.  The RP2040 will not be able to show an animated GIF that fills the screen.
+
 ### 3D Print Models
 
 The 3D model files can be found at [this link](https://www.printables.com/model/538771-rp2040-lcd-128-msa).  I don't think I used the pieces as the original author intended.  Therefore, not all of the pieces were used.  I recommend printing the pieces in `light v23.stl` and `vpu_threaded.3mf`.  I ended up drilling a 1/4" hole through the threaded piece so that I could mount a switch to conveniently disconnect battery power.
@@ -9,7 +11,7 @@ The 3D model files can be found at [this link](https://www.printables.com/model/
 ### Bill of Materials
 
 Other things you'll need:
-- [Waveshare RP2040-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0C4LRRVVN)
+- [Waveshare RP2040-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0C4LRRVVN) *OR* [Waveshare RP2350-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0DLBF5QKK)
 - [3.7V 310mAh 502030 Lithium Polymer Battery](https://www.amazon.com/dp/B08TBY5BFL) : It's more common to find this battery size in 250mAh.  You can get a 250mAh battery if this one is not available.  **Note: If you get the battery at this link, the connector polarity is opposite of what the RP2040 wants.  You'll need to switch the + and - wires around in the connector or solder on a new connector.  Do not connect to the RP2040 until you've done this!
 - [JST 1.25mm 2 pin connector cables with male and female connectors](https://www.amazon.com/dp/B013JRWCBU)
 - [WMYCONGCONG Latching Push Button Switch](https://www.amazon.com/dp/B07BMNYJ13)
@@ -36,7 +38,20 @@ cd rcat-MSA-LCD   (wherever you cloned this repo)
 mkdir build
 cd build
 export PICO_SDK_PATH=../../pico-sdk   (or wherever you put it)
+```
+
+If you're building for the RP2350 version of the display:
+```
+cmake -DTARGET_HW=rp2350 ..
+```
+
+Otherwise, if you're building for the RP2040 display:
+```
 cmake ..
+```
+
+Then for either version, run:
+```
 make
 ```
 
@@ -66,19 +81,21 @@ All images must be converted to C arrays that get incorporated into the source c
 
 #### For Animated GIFs
 
-The hardware is extremely limited in terms of available memory.  Total SRAM is only 264kB.  There are animated GIFs that are larger than that.  They obviously won't work.  The biggest factors in predicting whether an animated GIF will work are it's resolution and color depth.  Per the [LVGL documentation regarding GIF decoding](https://docs.lvgl.io/8.3/libs/gif.html), memory requirements are:
+The hardware is limited in terms of available memory.  You need to be mindful of how large of an animated GIF you're trying to load.  If you exceed the available memory, the application will likely crash on start-up.  The biggest factors in predicting whether an animated GIF will work are it's resolution and color depth.  Per the [LVGL documentation regarding GIF decoding](https://docs.lvgl.io/8.3/libs/gif.html), memory requirements are:
 
 - 8 bit color depth: 3 x image width x image height
 - 16 bit color depth: 4 x image width x image height
 - 32 bit color depth: 5 x image width x image height
 
-Here are some rough (untested) guidelines based on the above requirements:
+For the RP2040 hardware, here are some rough (untested) guidelines based on the above requirements:
 - up to ~60kB: Probably okay.
 - ~60kB-100kB: Starting to get questionable.
 - over 134kB: Risky / Likely to crash depending on rest of app.
 
 Needless to say, you won't be able to fill the 240x240 screen.  If you flash a new image and it doesn't start running as expected, you've likely encountered a memory allocation error.  Reduce the size of your animated GIF and try again.  The limits are obviously also
 dependent on how many other pictures you're trying to compile in.
+
+I haven't extensively tested the RP2350 hardware yet, but you're probably good up to about 384kB.
 
 To [convert an animated GIF](https://lvgl.io/tools/imageconverter) for use in the program:
 1. In the image converter, select *LVGL v8*.
