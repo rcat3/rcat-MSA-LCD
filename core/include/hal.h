@@ -20,6 +20,10 @@ int hal_init(void);
  * Called once, after lv_init(). */
 void hal_lvgl_register(void);
 
+/* Rotate the whole display, touch input included, clockwise in 90 degree
+ * steps (0 = normal, 1 = 90, 2 = 180, 3 = 270 degrees). */
+void hal_display_set_rotation(uint8_t quarter_turns);
+
 /* Set the backlight brightness in percent (0-100). */
 void hal_backlight_set(uint8_t percent);
 

@@ -67,6 +67,7 @@ void LCD_1IN28_Display(uint16_t *Image);
 void LCD_1IN28_DisplayWindows(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend, uint16_t *Image);
 void LCD_1IN28_DisplayPoint(uint16_t X, uint16_t Y, uint16_t Color);
 
+void LCD_1IN28_SetRotation(uint8_t quarter_turns);
 void LCD_1IN28_SetWindows(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend);
 
 #endif

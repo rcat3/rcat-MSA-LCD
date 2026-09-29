@@ -100,6 +100,21 @@ void hal_lvgl_register(void)
     irq_set_enabled(DMA_IRQ_0, true);
 }
 
+void hal_display_set_rotation(uint8_t quarter_turns)
+{
+    // The command goes over the same SPI bus as the DMA flush, so let any
+    // transfer in progress finish first.
+    dma_channel_wait_for_finish_blocking(dma_tx);
+    while (spi_is_busy(LCD_SPI_PORT))
+    {
+    }
+
+    // The panel rotates in hardware. LVGL still needs to know so it can map
+    // touch coordinates. LVGL counts rotation counter-clockwise.
+    LCD_1IN28_SetRotation(quarter_turns);
+    lv_disp_set_rotation(lv_disp_get_default(), (lv_disp_rot_t)((4 - (quarter_turns & 3)) & 3));
+}
+
 void hal_backlight_set(uint8_t percent)
 {
     DEV_SET_PWM(percent);

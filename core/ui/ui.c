@@ -42,10 +42,9 @@ static lv_obj_t *battery_label;
 static lv_obj_t *brightness_value_label;
 
 static uint8_t brightness = UI_INITIAL_BRIGHTNESS;
-static uint16_t img_rotation = 0;   // tenths of a degree
+static uint8_t rotation = 0;   // clockwise quarter turns
 
 static void build_tiles(void);
-static void apply_rotation(void);
 static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num);
 static void add_black_tile(lv_obj_t *tv, uint8_t num);
 static void add_brightness_tile(lv_obj_t *tv, uint8_t num);
@@ -115,7 +114,6 @@ static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num)
     {
         this_img = lv_img_create(this_tile);
         lv_img_set_src(this_img, pic->img);
-        lv_img_set_angle(this_img, img_rotation);
     }
 
     lv_obj_align(this_img, LV_ALIGN_CENTER, 0, 0);
@@ -159,17 +157,17 @@ static void add_rotation_tile(lv_obj_t *tv, uint8_t num)
     // Last tile, so it can only swipe up.
     lv_obj_t *rotation_tile = lv_tileview_add_tile(tv, 0, num, LV_DIR_TOP);
 
-    // Image rotation roller.
+    // Display rotation roller.
     lv_obj_t *rotation_roller = lv_roller_create(rotation_tile);
     lv_roller_set_options(rotation_roller,
                           "0°\n90°\n180°\n270°", LV_ROLLER_MODE_NORMAL);
     lv_roller_set_visible_row_count(rotation_roller, 3);
-    lv_roller_set_selected(rotation_roller, img_rotation / 900, LV_ANIM_OFF);
+    lv_roller_set_selected(rotation_roller, rotation, LV_ANIM_OFF);
     lv_obj_center(rotation_roller);
     lv_obj_add_event_cb(rotation_roller, rotation_roller_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_t *rotation_label = lv_label_create(rotation_tile);
-    lv_label_set_text(rotation_label, "Img Rotation");
+    lv_label_set_text(rotation_label, "Rotation");
     lv_obj_align_to(rotation_label, rotation_roller, LV_ALIGN_OUT_TOP_MID, 0, -10);
 }
 
@@ -188,30 +186,8 @@ static void rotation_roller_event_cb(lv_event_t *e)
     lv_obj_t *rotation_roller = lv_event_get_target(e);
 
     // Roller options are 0, 90, 180 and 270 degrees.
-    img_rotation = lv_roller_get_selected(rotation_roller) * 900;
-
-    apply_rotation();
-}
-
-/********************************************************************************
-function:	Rotate the static images in place and jump back to the first image
-parameter:
-********************************************************************************/
-static void apply_rotation(void)
-{
-    uint32_t tile_count = lv_obj_get_child_cnt(tileview);
-    for (uint32_t i = 0; i < tile_count; i++)
-    {
-        lv_obj_t *img = lv_obj_get_child(lv_obj_get_child(tileview, i), 0);
-
-        // Exact class check, so animated GIFs (a subclass of lv_img) are skipped.
-        if (lv_obj_check_type(img, &lv_img_class))
-        {
-            lv_img_set_angle(img, img_rotation);
-        }
-    }
-
-    lv_obj_set_tile_id(tileview, 0, 0, LV_ANIM_OFF);
+    rotation = lv_roller_get_selected(rotation_roller);
+    hal_display_set_rotation(rotation);
 }
 
 static void battery_timer_cb(lv_timer_t *t)

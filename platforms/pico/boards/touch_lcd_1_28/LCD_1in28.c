@@ -347,6 +347,24 @@ static void LCD_1IN28_SetAttributes(uint8_t Scan_dir)
 }
 
 /********************************************************************************
+function:	Rotate the panel's scan direction so that everything drawn afterwards
+            appears rotated clockwise by the given number of 90 degree steps.
+            The panel is square, so the resolution doesn't change.
+parameter:
+		quarter_turns:   0 = normal, 1 = 90, 2 = 180, 3 = 270 degrees
+********************************************************************************/
+void LCD_1IN28_SetRotation(uint8_t quarter_turns)
+{
+    // Memory access control (MADCTL) values: MY, MX and MV bits plus BGR (0x08).
+    // 0x08 is what LCD_1IN28_InitReg() leaves the panel at (it overrides the
+    // value written by LCD_1IN28_SetAttributes()).
+    static const uint8_t madctl[4] = { 0x08, 0x68, 0xC8, 0xA8 };
+
+    LCD_1IN28_SendCommand(0x36);
+    LCD_1IN28_SendData_8Bit(madctl[quarter_turns & 3]);
+}
+
+/********************************************************************************
 function :	Initialize the lcd
 parameter:
 ********************************************************************************/
