@@ -6,7 +6,7 @@ include_directories(../lib/Config)
 include_directories(../lib/LCD)
 include_directories(../lib/QMI8658)
 include_directories(../lib/Touch)
-include_directories(../lib/lvgl)
+include_directories(../third_party/lvgl)
 include_directories(./inc)
 
 

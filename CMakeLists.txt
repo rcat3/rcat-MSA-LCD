@@ -32,7 +32,10 @@ add_subdirectory(./lib/Config)
 add_subdirectory(./lib/LCD)
 add_subdirectory(./lib/Touch)
 add_subdirectory(./lib/QMI8658)
-add_subdirectory(./lib/lvgl)
+# LVGL (git submodule). Only the library sources are built; lv_conf.h comes from examples/inc.
+file(GLOB_RECURSE LVGL_SOURCES ${CMAKE_CURRENT_LIST_DIR}/third_party/lvgl/src/*.c)
+add_library(LVGL ${LVGL_SOURCES})
+target_include_directories(LVGL PUBLIC ${CMAKE_CURRENT_LIST_DIR}/third_party/lvgl ${CMAKE_CURRENT_LIST_DIR}/examples/inc)
 add_subdirectory(./examples)
 
 
@@ -42,7 +45,7 @@ include_directories(./lib/Config)
 include_directories(./lib/LCD)
 include_directories(./lib/Touch)
 include_directories(./lib/QMI8658)
-include_directories(./lib/lvgl)
+include_directories(./third_party/lvgl)
 include_directories(./examples/inc)
 
 
