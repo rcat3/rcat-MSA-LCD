@@ -1,3 +1,14 @@
-build/*
-*~
+# Build output
+build/
+build-*/
 
+# CMake files from accidental in-source builds
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Editor backups
+*~
+*.swp
+.vscode/
