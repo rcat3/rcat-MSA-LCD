@@ -45,6 +45,7 @@ static uint8_t brightness = UI_INITIAL_BRIGHTNESS;
 static uint16_t img_rotation = 0;   // tenths of a degree
 
 static void build_tiles(void);
+static void apply_rotation(void);
 static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num);
 static void add_black_tile(lv_obj_t *tv, uint8_t num);
 static void add_brightness_tile(lv_obj_t *tv, uint8_t num);
@@ -70,18 +71,11 @@ void ui_init(void)
 }
 
 /********************************************************************************
-function:	Create the tile view. Called again whenever the rotation changes.
+function:	Create the tile view
 parameter:
 ********************************************************************************/
 static void build_tiles(void)
 {
-    // Rebuilding happens from inside a roller event on the old tile view, so
-    // it can't be deleted right away.
-    if (tileview != NULL)
-    {
-        lv_obj_del_async(tileview);
-    }
-
     tileview = lv_tileview_create(lv_scr_act());
     lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
 
@@ -196,7 +190,28 @@ static void rotation_roller_event_cb(lv_event_t *e)
     // Roller options are 0, 90, 180 and 270 degrees.
     img_rotation = lv_roller_get_selected(rotation_roller) * 900;
 
-    build_tiles();
+    apply_rotation();
+}
+
+/********************************************************************************
+function:	Rotate the static images in place and jump back to the first image
+parameter:
+********************************************************************************/
+static void apply_rotation(void)
+{
+    uint32_t tile_count = lv_obj_get_child_cnt(tileview);
+    for (uint32_t i = 0; i < tile_count; i++)
+    {
+        lv_obj_t *img = lv_obj_get_child(lv_obj_get_child(tileview, i), 0);
+
+        // Exact class check, so animated GIFs (a subclass of lv_img) are skipped.
+        if (lv_obj_check_type(img, &lv_img_class))
+        {
+            lv_img_set_angle(img, img_rotation);
+        }
+    }
+
+    lv_obj_set_tile_id(tileview, 0, 0, LV_ANIM_OFF);
 }
 
 static void battery_timer_cb(lv_timer_t *t)
