@@ -31,31 +31,41 @@ If you want to change the images, you'll need to rebuild the software image and 
 
 First, you're going to need to clone the [pico-sdk](https://github.com/raspberrypi/pico-sdk) project from GitHub.  Make a new folder somewhere and `cd` into that folder.  Then `git clone https://github.com/raspberrypi/pico-sdk.git`.  Note this folder location.  You'll need it in the next step.
 
+### Getting the code
+
+LVGL is included as a git submodule, so clone with `--recursive`:
+
+```
+git clone --recursive https://github.com/rcat3/rcat-MSA-LCD.git
+```
+
+If you already cloned without it, run `git submodule update --init` inside the repo.
+
 ### Building the rcat-MSA-LCD project
 
 ```
 cd rcat-MSA-LCD   (wherever you cloned this repo)
-mkdir build
-cd build
-export PICO_SDK_PATH=../../pico-sdk   (or wherever you put it)
+export PICO_SDK_PATH=../pico-sdk   (or wherever you put it)
 ```
 
 If you're building for the RP2350 version of the display:
 ```
-cmake -DTARGET_HW=rp2350 ..
+cmake -S platforms/pico -B build -DBOARD=waveshare_rp2350_touch_lcd_1_28
 ```
 
 Otherwise, if you're building for the RP2040 display:
 ```
-cmake ..
+cmake -S platforms/pico -B build -DBOARD=waveshare_rp2040_touch_lcd_1_28
 ```
 
 Then for either version, run:
 ```
-make
+cmake --build build -j
 ```
 
-When compilation is complete, you should have a file called `rcat-MSA-LCD.uf2`.  This is the image file you'll flash in the next step.
+When compilation is complete, you should have a file called `build/rcat-msa-lcd.uf2`.  This is the image file you'll flash in the next step.
+
+If you switch between boards, delete the `build` folder first (or use a different build folder for each board).
 
 ### Flashing the image
 
@@ -77,7 +87,7 @@ All images must be converted to C arrays that get incorporated into the source c
 4. Output format should be *C array*.
 5. Leave the boxes unchecked.  
 6. Click *Convert*.  The converted image will download automatically.
-7. Copy the downloaded .c file to `examples/src`.
+7. Copy the downloaded .c file to `core/media/images`.
 
 #### For Animated GIFs
 
@@ -104,15 +114,29 @@ To [convert an animated GIF](https://lvgl.io/tools/imageconverter) for use in th
 4. Output format should be *C array*.
 5. Leave the boxes unchecked.  
 6. Click *Convert*.  The converted image will download automatically.
-7. Copy the downloaded .c file to `examples/src`.
+7. Copy the downloaded .c file to `core/media/images`.
 
 ### Modifying the source code
 
-1. Edit `LVGL_example.c` to add your image (or replace an existing image).
-2. Find the `Widgets_Init()` function around [line 144](https://github.com/rcat3/rcat-MSA-LCD/blob/master/examples/src/LVGL_example.c#L144).
-3. If you're adding an image, increment `num_imgs` as necessary.  If you're replacing an image, you can leave it as is.  If you're removing an image, decrement `num_imgs`.
-4. Add calls for your image.  You should add the following two lines to their respective groups.  Substitute `your_image` for your image name.  Pick an appropriate number for the third parameter in `add_pic_tile()`.  Each call should have it's own unique number (in order).  The fourth parameter for `add_pic_tile()` indicates whether the image you're adding is an animated GIF or not.  Set to false for a static image.  Set to true for an animated GIF.
+The list of images lives in [`core/media/image_list.c`](core/media/image_list.c).  Images are shown in the order they're listed.  To add an image, declare it and add it to the list.  Substitute `your_image` for your image name (it's the same as the name of the downloaded .c file).  The second value says whether the image is an animated GIF: `false` for a static image, `true` for an animated GIF.
+
 ```
 LV_IMG_DECLARE(your_image);
-add_pic_tile(tv, &your_image, 5, false);
+
+const media_image_t media_images[] = {
+    ...
+    { &your_image, false },
+};
 ```
+
+To remove an image, just take it out of the list.  Images in `core/media/images` that aren't in the list don't take up any space in the firmware.
+
+## Project layout
+
+- `core/` - The application itself (UI, image list, settings).  This code doesn't depend on any particular board.
+- `core/include/hal.h` - The small set of functions each board has to provide (display, touch, backlight, battery).
+- `platforms/pico/` - Build files for the Raspberry Pi RP2040/RP2350 boards.  `boards/*.cmake` lists the supported boards, and `boards/touch_lcd_1_28/` has the Waveshare drivers for the 1.28" round display.
+- `third_party/lvgl/` - The [LVGL](https://lvgl.io) graphics library (git submodule).
+- `imgs/` - Source images.
+
+The idea is to make it straightforward to add other displays and microcontrollers (ESP32-S3 is next) without copying the application code around.
