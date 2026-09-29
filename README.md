@@ -45,8 +45,10 @@ If you already cloned without it, run `git submodule update --init` inside the r
 
 ```
 cd rcat-MSA-LCD   (wherever you cloned this repo)
-export PICO_SDK_PATH=../pico-sdk   (or wherever you put it)
+export PICO_SDK_PATH=$HOME/pico-sdk   (or wherever you put it)
 ```
+
+Use an absolute path for `PICO_SDK_PATH`.  A relative path gets resolved from inside the `build` folder, not from where you run the command, which is confusing.
 
 If you're building for the RP2350 version of the display:
 ```
