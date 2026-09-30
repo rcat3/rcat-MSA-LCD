@@ -1,5 +1,6 @@
 #include "app.h"
 #include "app/settings.h"
+#include "audio/audio_level.h"
 #include "hal.h"
 #include "lvgl.h"
 #include "ui/ui.h"
@@ -16,6 +17,7 @@ void app_run(void)
     lv_init();
     rcat_hal_lvgl_register();
     rcat_hal_display_set_rotation(settings_get()->rotation);
+    audio_level_start();    // does nothing on boards without a microphone
     ui_init();
 
     while (1)

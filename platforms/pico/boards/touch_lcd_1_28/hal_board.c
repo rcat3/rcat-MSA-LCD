@@ -179,6 +179,12 @@ bool rcat_hal_settings_write(const void *data, size_t len)
     return flash_safe_execute(settings_write_cb, &w, 100) == PICO_OK;
 }
 
+bool rcat_hal_audio_in_start(uint32_t sample_rate, rcat_hal_audio_block_cb_t cb, void *user_data)
+{
+    // No microphone on this board.
+    return false;
+}
+
 void rcat_hal_delay_ms(uint32_t ms)
 {
     DEV_Delay_ms(ms);

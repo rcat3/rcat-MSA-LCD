@@ -32,10 +32,13 @@
 #include <string.h>
 
 #include "app/settings.h"
+#include "audio/audio_level.h"
 #include "hal.h"
 #include "lvgl.h"
 #include "media/image_list.h"
+#include "ui/kitt.h"
 #include "ui/ui.h"
+#include "ui/ui_internal.h"
 
 #define BATTERY_UPDATE_MS 1000
 
@@ -50,6 +53,8 @@ static lv_obj_t *tileview;
 static lv_obj_t *battery_label;
 static lv_obj_t *brightness_value_label;
 static uint8_t tile_count;
+static int kitt_tile = -1;      // -1 when the board has no microphone
+static uint8_t blank_tile;
 static int32_t screen_size;
 static lv_timer_t *rotation_timer;
 static uint8_t pending_rotation;
@@ -60,9 +65,15 @@ static int32_t px(int32_t design_px)
     return design_px * screen_size / DESIGN_SIZE;
 }
 
+int32_t ui_px(int32_t design_px)
+{
+    return px(design_px);
+}
+
 static void setup_theme(void);
 static void build_tiles(void);
 static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num);
+static void add_kitt_tile(lv_obj_t *tv, uint8_t num);
 static void add_black_tile(lv_obj_t *tv, uint8_t num);
 static void add_brightness_tile(lv_obj_t *tv, uint8_t num);
 static void add_rotation_tile(lv_obj_t *tv, uint8_t num);
@@ -131,14 +142,22 @@ static void build_tiles(void)
     tileview = lv_tileview_create(lv_screen_active());
     lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
 
-    // Images, the black tile, then brightness, rotation and startup image.
-    tile_count = media_image_count + 4;
+    // Images, the KITT voice box (if there's a microphone), the black tile,
+    // then brightness, rotation and startup image.
+    bool has_kitt = audio_level_available();
+    tile_count = media_image_count + (has_kitt ? 1 : 0) + 4;
 
     uint8_t num = 0;
     for (size_t i = 0; i < media_image_count; i++)
     {
         add_pic_tile(tileview, &media_images[i], num++);
     }
+    if (has_kitt)
+    {
+        kitt_tile = num;
+        add_kitt_tile(tileview, num++);
+    }
+    blank_tile = num;
     add_black_tile(tileview, num++);
     add_brightness_tile(tileview, num++);
     add_rotation_tile(tileview, num++);
@@ -171,11 +190,15 @@ static uint8_t startup_tile_index(void)
 
     if (strcmp(name, SETTINGS_STARTUP_BLANK) == 0)
     {
-        // The black tile comes right after the images.
-        return media_image_count;
+        return blank_tile;
+    }
+    if (strcmp(name, SETTINGS_STARTUP_KITT) == 0 && kitt_tile >= 0)
+    {
+        return kitt_tile;
     }
 
-    // Unknown names (e.g. an image that's since been removed) fall back to the first image.
+    // Unknown names (e.g. an image that's since been removed, or KITT on a
+    // board without a microphone) fall back to the first image.
     int index = media_find_image(name);
     return (index < 0) ? 0 : index;
 }
@@ -208,6 +231,14 @@ static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num)
     }
 
     lv_obj_align(this_img, LV_ALIGN_CENTER, 0, 0);
+}
+
+static void add_kitt_tile(lv_obj_t *tv, uint8_t num)
+{
+    lv_obj_t *this_tile = lv_tileview_add_tile(tv, 0, num, tile_direction(num));
+    lv_obj_set_style_bg_color(this_tile, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(this_tile, LV_OPA_COVER, 0);
+    kitt_create(this_tile);
 }
 
 static void add_black_tile(lv_obj_t *tv, uint8_t num)
@@ -265,8 +296,9 @@ static void add_startup_tile(lv_obj_t *tv, uint8_t num)
 {
     lv_obj_t *startup_tile = lv_tileview_add_tile(tv, 0, num, tile_direction(num));
 
-    // Roller options: every image name, then "Blank", separated by newlines.
-    size_t len = sizeof("Blank");
+    // Roller options, in the same order as the tiles: every image name, then
+    // "KITT" if there's a microphone, then "Blank", separated by newlines.
+    size_t len = sizeof("KITT\nBlank");
     for (size_t i = 0; i < media_image_count; i++)
     {
         len += strlen(media_images[i].name) + 1;
@@ -277,6 +309,10 @@ static void add_startup_tile(lv_obj_t *tv, uint8_t num)
     {
         strcat(options, media_images[i].name);
         strcat(options, "\n");
+    }
+    if (kitt_tile >= 0)
+    {
+        strcat(options, "KITT\n");
     }
     strcat(options, "Blank");
 
@@ -335,9 +371,14 @@ static void startup_roller_event_cb(lv_event_t *e)
     lv_obj_t *startup_roller = lv_event_get_target_obj(e);
     uint16_t selected = lv_roller_get_selected(startup_roller);
 
+    // The roller options are in tile order.
     if (selected < media_image_count)
     {
         settings_set_startup_image(media_images[selected].name);
+    }
+    else if ((int)selected == kitt_tile)
+    {
+        settings_set_startup_image(SETTINGS_STARTUP_KITT);
     }
     else
     {

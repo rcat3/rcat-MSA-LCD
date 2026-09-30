@@ -42,6 +42,15 @@ bool rcat_hal_battery_voltage(float *volts);
 bool rcat_hal_settings_read(void *data, size_t len);
 bool rcat_hal_settings_write(const void *data, size_t len);
 
+/* Called with each block of microphone samples (mono, signed 16-bit). It runs
+ * on the board's audio task, not the UI loop, so it has to be quick and must
+ * not call LVGL. */
+typedef void (*rcat_hal_audio_block_cb_t)(const int16_t *samples, size_t count, void *user_data);
+
+/* Start capturing from the microphone and passing blocks of samples to cb.
+ * Returns false if the board has no microphone. */
+bool rcat_hal_audio_in_start(uint32_t sample_rate, rcat_hal_audio_block_cb_t cb, void *user_data);
+
 void rcat_hal_delay_ms(uint32_t ms);
 
 #endif

@@ -15,6 +15,7 @@
 
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
+#include "driver/i2s_std.h"
 #include "driver/ledc.h"
 #include "driver/spi_master.h"
 #include "esp_adc/adc_cali.h"
@@ -75,6 +76,16 @@ static const char *TAG = "board";
 #define BAT_DIVIDER         3.0f
 #define BAT_CORRECTION      0.990476f   // from Waveshare's demo
 
+// Microphone (I2S). It sends 24-bit samples in the top of 32-bit slots, on
+// the right channel (from Waveshare's demo).
+#define PIN_MIC_BCLK        15
+#define PIN_MIC_WS          2
+#define PIN_MIC_DIN         39
+#define AUDIO_BLOCK_MS      10
+#define AUDIO_TASK_STACK    4096
+#define AUDIO_TASK_PRIORITY 5
+#define AUDIO_TASK_CORE     1       // LVGL runs on core 0
+
 // Backlight PWM
 #define BL_LEDC_TIMER       LEDC_TIMER_0
 #define BL_LEDC_CHANNEL     LEDC_CHANNEL_0
@@ -102,6 +113,11 @@ static esp_lcd_panel_handle_t panel;
 static esp_lcd_touch_handle_t touch;
 static adc_oneshot_unit_handle_t adc;
 static adc_cali_handle_t adc_cali;
+
+static i2s_chan_handle_t mic_channel;
+static rcat_hal_audio_block_cb_t audio_cb;
+static void *audio_cb_user_data;
+static size_t audio_block_samples;
 
 static lv_display_t *display;
 static uint8_t *draw_buf1;
@@ -224,6 +240,72 @@ bool rcat_hal_settings_write(const void *data, size_t len)
     }
     nvs_close(nvs);
     return err == ESP_OK;
+}
+
+/********************************************************************************
+function:	Read the microphone in blocks and hand them to the callback
+parameter:
+********************************************************************************/
+static void audio_task(void *arg)
+{
+    int32_t *raw = heap_caps_malloc(audio_block_samples * sizeof(int32_t), MALLOC_CAP_INTERNAL);
+    int16_t *samples = heap_caps_malloc(audio_block_samples * sizeof(int16_t), MALLOC_CAP_INTERNAL);
+    assert(raw && samples);
+
+    while (1)
+    {
+        size_t bytes_read = 0;
+        if (i2s_channel_read(mic_channel, raw, audio_block_samples * sizeof(int32_t), &bytes_read, portMAX_DELAY) != ESP_OK)
+        {
+            continue;
+        }
+
+        size_t count = bytes_read / sizeof(int32_t);
+        for (size_t i = 0; i < count; i++)
+        {
+            samples[i] = (int16_t)(raw[i] >> 16);
+        }
+        audio_cb(samples, count, audio_cb_user_data);
+    }
+}
+
+bool rcat_hal_audio_in_start(uint32_t sample_rate, rcat_hal_audio_block_cb_t cb, void *user_data)
+{
+    if (mic_channel != NULL)
+    {
+        return false;   // already running
+    }
+
+    audio_cb = cb;
+    audio_cb_user_data = user_data;
+    audio_block_samples = sample_rate * AUDIO_BLOCK_MS / 1000;
+
+    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+    chan_config.dma_frame_num = audio_block_samples;
+    if (i2s_new_channel(&chan_config, NULL, &mic_channel) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "No I2S channel for the microphone");
+        mic_channel = NULL;
+        return false;
+    }
+
+    i2s_std_config_t std_config = {
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(sample_rate),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_MONO),
+        .gpio_cfg = {
+            .mclk = I2S_GPIO_UNUSED,
+            .bclk = PIN_MIC_BCLK,
+            .ws = PIN_MIC_WS,
+            .dout = I2S_GPIO_UNUSED,
+            .din = PIN_MIC_DIN,
+        },
+    };
+    std_config.slot_cfg.slot_mask = I2S_STD_SLOT_RIGHT;
+    ESP_ERROR_CHECK(i2s_channel_init_std_mode(mic_channel, &std_config));
+    ESP_ERROR_CHECK(i2s_channel_enable(mic_channel));
+
+    xTaskCreatePinnedToCore(audio_task, "audio", AUDIO_TASK_STACK, NULL, AUDIO_TASK_PRIORITY, NULL, AUDIO_TASK_CORE);
+    return true;
 }
 
 void rcat_hal_delay_ms(uint32_t ms)

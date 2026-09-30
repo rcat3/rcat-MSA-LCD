@@ -6,8 +6,9 @@
 #define SETTINGS_DEFAULT_BRIGHTNESS 50
 #define SETTINGS_NAME_LEN           24
 
-/* Startup image name that selects the blank (black) tile. */
+/* Startup image names that select the blank (black) tile and the KITT tile. */
 #define SETTINGS_STARTUP_BLANK      "blank"
+#define SETTINGS_STARTUP_KITT       "kitt"
 
 /* Only ever add new fields to the end. Settings saved by older firmware are
  * still loaded, and any fields they don't have get their defaults. */
