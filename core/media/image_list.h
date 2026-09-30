@@ -8,7 +8,7 @@
 typedef struct
 {
     const char *name;
-    const lv_img_dsc_t *img;
+    const lv_image_dsc_t *img;
     bool is_gif;
 } media_image_t;
 

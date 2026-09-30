@@ -41,7 +41,6 @@
 #include "CST816S.h"
 
 #define DRAW_BUF_LINES 10
-#define LVGL_TICK_MS   5
 
 // Settings live in the last sector of flash, well past the end of the firmware.
 // Flashing a new .uf2 doesn't touch it, so settings survive firmware updates.
@@ -50,23 +49,22 @@
 extern char __flash_binary_end;
 
 // LVGL
-static lv_disp_draw_buf_t disp_buf;
-static lv_color_t buf0[LCD_1IN28_WIDTH * DRAW_BUF_LINES];
-static lv_disp_drv_t disp_drv;
-static lv_indev_drv_t indev_ts;
+static lv_display_t *display;
+static uint8_t draw_buf[LCD_1IN28_WIDTH * DRAW_BUF_LINES * 2] __attribute__((aligned(4)));
 
 // Touch screen state, updated from the touch interrupt
 static uint16_t ts_x;
 static uint16_t ts_y;
 static lv_indev_state_t ts_act;
 
-static struct repeating_timer lvgl_timer;
+// Display rotation in clockwise quarter turns, used to map touch coordinates
+static uint8_t rotation;
 
-static void disp_flush_cb(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
+static void disp_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
 static void touch_callback(uint gpio, uint32_t events);
-static void ts_read_cb(lv_indev_drv_t *drv, lv_indev_data_t *data);
+static void ts_read_cb(lv_indev_t *indev, lv_indev_data_t *data);
 static void dma_handler(void);
-static bool repeating_lvgl_timer_callback(struct repeating_timer *t);
+static uint32_t tick_get_cb(void);
 
 int hal_init(void)
 {
@@ -82,27 +80,22 @@ int hal_init(void)
 
 /********************************************************************************
 function:	Register the display and touch screen with LVGL, then enable the
-            tick timer and the DMA IRQ used for flushing
+            DMA IRQ used for flushing
 parameter:
 ********************************************************************************/
 void hal_lvgl_register(void)
 {
-    add_repeating_timer_ms(LVGL_TICK_MS, repeating_lvgl_timer_callback, NULL, &lvgl_timer);
+    lv_tick_set_cb(tick_get_cb);
 
     // Display
-    lv_disp_draw_buf_init(&disp_buf, buf0, NULL, LCD_1IN28_WIDTH * DRAW_BUF_LINES);
-    lv_disp_drv_init(&disp_drv);
-    disp_drv.flush_cb = disp_flush_cb;
-    disp_drv.draw_buf = &disp_buf;
-    disp_drv.hor_res = LCD_1IN28_WIDTH;
-    disp_drv.ver_res = LCD_1IN28_HEIGHT;
-    lv_disp_drv_register(&disp_drv);
+    display = lv_display_create(LCD_1IN28_WIDTH, LCD_1IN28_HEIGHT);
+    lv_display_set_flush_cb(display, disp_flush_cb);
+    lv_display_set_buffers(display, draw_buf, NULL, sizeof(draw_buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     // Touch screen
-    lv_indev_drv_init(&indev_ts);
-    indev_ts.type = LV_INDEV_TYPE_POINTER;
-    indev_ts.read_cb = ts_read_cb;
-    lv_indev_drv_register(&indev_ts);
+    lv_indev_t *indev = lv_indev_create();
+    lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(indev, ts_read_cb);
     DEV_IRQ_SET(Touch_INT_PIN, GPIO_IRQ_EDGE_RISE, &touch_callback);
 
     // DMA for transmitting color data from memory to SPI
@@ -120,10 +113,11 @@ void hal_display_set_rotation(uint8_t quarter_turns)
     {
     }
 
-    // The panel rotates in hardware. LVGL still needs to know so it can map
-    // touch coordinates. LVGL counts rotation counter-clockwise.
-    LCD_1IN28_SetRotation(quarter_turns);
-    lv_disp_set_rotation(lv_disp_get_default(), (lv_disp_rot_t)((4 - (quarter_turns & 3)) & 3));
+    // The panel rotates in hardware and the touch coordinates are mapped to
+    // match in ts_read_cb(). LVGL itself doesn't need to know.
+    rotation = quarter_turns & 3;
+    LCD_1IN28_SetRotation(rotation);
+    lv_obj_invalidate(lv_screen_active());
 }
 
 void hal_backlight_set(uint8_t percent)
@@ -194,14 +188,19 @@ void hal_delay_ms(uint32_t ms)
 function:	Refresh image by transferring the color data to the SPI bus by DMA
 parameter:
 ********************************************************************************/
-static void disp_flush_cb(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
+static void disp_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
+    uint32_t pixels = lv_area_get_size(area);
+
+    // LVGL renders little-endian RGB565 but the panel wants the high byte first.
+    lv_draw_sw_rgb565_swap(px_map, pixels);
+
     LCD_1IN28_SetWindows(area->x1, area->y1, area->x2, area->y2);
     dma_channel_configure(dma_tx,
                           &c,
                           &spi_get_hw(LCD_SPI_PORT)->dr,
-                          color_p, // read address
-                          ((area->x2 + 1 - area->x1) * (area->y2 + 1 - area->y1)) * 2,
+                          px_map, // read address
+                          pixels * 2,
                           true);
 }
 
@@ -214,7 +213,7 @@ static void dma_handler(void)
     if (dma_channel_get_irq0_status(dma_tx))
     {
         dma_channel_acknowledge_irq0(dma_tx);
-        lv_disp_flush_ready(&disp_drv);
+        lv_display_flush_ready(display);
     }
 }
 
@@ -234,23 +233,42 @@ static void touch_callback(uint gpio, uint32_t events)
 }
 
 /********************************************************************************
-function:   Update touch screen input device status
+function:   Update touch screen input device status, rotating the touch point
+            to match the display rotation
 parameter:
 ********************************************************************************/
-static void ts_read_cb(lv_indev_drv_t *drv, lv_indev_data_t *data)
+static void ts_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
-    data->point.x = ts_x;
-    data->point.y = ts_y;
+    const int32_t max = LCD_1IN28_WIDTH - 1;    // the panel is square
+
+    switch (rotation)
+    {
+        case 1:
+            data->point.x = ts_y;
+            data->point.y = max - ts_x;
+            break;
+        case 2:
+            data->point.x = max - ts_x;
+            data->point.y = max - ts_y;
+            break;
+        case 3:
+            data->point.x = max - ts_y;
+            data->point.y = ts_x;
+            break;
+        default:
+            data->point.x = ts_x;
+            data->point.y = ts_y;
+            break;
+    }
     data->state = ts_act;
     ts_act = LV_INDEV_STATE_RELEASED;
 }
 
 /********************************************************************************
-function:   Report the elapsed time to LVGL
+function:   Milliseconds since boot, for LVGL's timing
 parameter:
 ********************************************************************************/
-static bool repeating_lvgl_timer_callback(struct repeating_timer *t)
+static uint32_t tick_get_cb(void)
 {
-    lv_tick_inc(LVGL_TICK_MS);
-    return true;
+    return to_ms_since_boot(get_absolute_time());
 }

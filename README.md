@@ -2,7 +2,7 @@
 
 ## Hardware
 
-This project now supports both the [Waveshare RP2040-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0C4LRRVVN) as well as the [Waveshare RP2350-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0DLBF5QKK).  The RP2040 version has 264kB of SRAM while the RP2350 version has 520kB.  They're about the same price, so I'd recommend just getting the RP2350 version.  This is especially true if you're interested in displaying animated GIFs.  GIFs are very memory intensive.  The RP2040 will not be able to show an animated GIF that fills the screen.
+This project now supports both the [Waveshare RP2040-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0C4LRRVVN) as well as the [Waveshare RP2350-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0DLBF5QKK).  The RP2040 version has 264kB of SRAM while the RP2350 version has 520kB.  They're about the same price, so I'd recommend just getting the RP2350 version.  This is especially true if you're interested in displaying animated GIFs.  GIFs are very memory intensive, and the RP2350 has a lot more room for them.
 
 ### 3D Print Models
 
@@ -21,7 +21,7 @@ Other things you'll need:
 
 ## Software
 
-I created this project because I was having trouble with all of the other existing projects intended for this hardware.  They all failed to initialize the touch screen over I2C or were otherwise unreliable on my hardware.  The Waveshare example projects seemed to work fine, though.  Therefore, I just hacked this together from the [Waveshare example project that uses the LVGL GUI library](https://www.waveshare.com/wiki/RP2040-Touch-LCD-1.28#LVGL_Example_Demo).  The LVGL library opens up a lot of cool possibilities for effects if you want to spend the time working with it.  Take a look at the [LVGL documentation](https://docs.lvgl.io/8.1/) to get an idea of what it's capable of.  The original demo can be downloaded from [this link](https://files.waveshare.com/upload/1/16/RP2040-Touch-LCD-1.28-LVGL.zip).
+I created this project because I was having trouble with all of the other existing projects intended for this hardware.  They all failed to initialize the touch screen over I2C or were otherwise unreliable on my hardware.  The Waveshare example projects seemed to work fine, though.  Therefore, I just hacked this together from the [Waveshare example project that uses the LVGL GUI library](https://www.waveshare.com/wiki/RP2040-Touch-LCD-1.28#LVGL_Example_Demo).  The LVGL library opens up a lot of cool possibilities for effects if you want to spend the time working with it.  Take a look at the [LVGL documentation](https://docs.lvgl.io/) to get an idea of what it's capable of (this project uses LVGL v9.5).  The original demo can be downloaded from [this link](https://files.waveshare.com/upload/1/16/RP2040-Touch-LCD-1.28-LVGL.zip).
 
 My implementation originally focused on displaying static images, but it now supports small animated GIFs as well.  You can swipe up/down to change images.  The last few tiles in the sequence allow you to adjust the LCD brightness, view the battery voltage, rotate the display, and pick which image is shown at startup.  Rotation might be helpful if you're having trouble orienting the LCD display properly in the MSA's VPU threads.  These settings are saved and restored when the display is powered back on.
 
@@ -79,48 +79,26 @@ Connect the USB-C port of the RP2040 to your computer.  To flash a new image ont
 
 ### Converting the image
 
-All images must be converted to C arrays that get incorporated into the source code.  Use the [LVGL Image Converter](https://lvgl.io/tools/imageconverter) to convert the images.  The image dimensions should be 240x240 or less.
+All images are converted to C files that get compiled into the firmware.  The `tools/img2c.py` script does the conversion (it needs Python 3 and Pillow: `pip install pillow`).  Keep the original image in `imgs/`, then run the script from the top of the repo:
 
-#### For Static Images
+```
+python3 tools/img2c.py imgs/your_image.png
+```
 
-1. In the image converter, select *LVGL v8*.
-2. Click *Select image file(s)* and navigate to your desired image.
-3. For *Color Format*, select *CF_TRUE_COLOR*.
-4. Output format should be *C array*.
-5. Leave the boxes unchecked.  
-6. Click *Convert*.  The converted image will download automatically.
-7. Copy the downloaded .c file to `core/media/images`.
+This writes `core/media/images/your_image.c`.  The image name is taken from the file name.  Use `--name` to pick a different one.  Static images (PNG, BMP, JPG, ...) are converted to the display's 16-bit color format.  Animated GIFs are stored as-is and decoded while they play.  The image dimensions should be 240x240 or less.
 
-#### For Animated GIFs
+#### Animated GIF memory use
 
-The hardware is limited in terms of available memory.  You need to be mindful of how large of an animated GIF you're trying to load.  If you exceed the available memory, the application will likely crash on start-up.  The biggest factors in predicting whether an animated GIF will work are it's resolution and color depth.  Per the [LVGL documentation regarding GIF decoding](https://docs.lvgl.io/8.3/libs/gif.html), memory requirements are:
+Animated GIFs are decoded in RAM while they're on screen, so you need to be mindful of how large of an animated GIF you're trying to load.  If you exceed the available memory, the application will likely crash on start-up.  Each GIF needs about:
 
-- 8 bit color depth: 3 x image width x image height
-- 16 bit color depth: 4 x image width x image height
-- 32 bit color depth: 5 x image width x image height
+- 2 bytes x image width x image height, plus
+- about 24kB for the decoder
 
-For the RP2040 hardware, here are some rough (untested) guidelines based on the above requirements:
-- up to ~60kB: Probably okay.
-- ~60kB-100kB: Starting to get questionable.
-- over 134kB: Risky / Likely to crash depending on rest of app.
-
-Needless to say, you won't be able to fill the 240x240 screen.  If you flash a new image and it doesn't start running as expected, you've likely encountered a memory allocation error.  Reduce the size of your animated GIF and try again.  The limits are obviously also
-dependent on how many other pictures you're trying to compile in.
-
-I haven't extensively tested the RP2350 hardware yet, but you're probably good up to about 384kB.
-
-To [convert an animated GIF](https://lvgl.io/tools/imageconverter) for use in the program:
-1. In the image converter, select *LVGL v8*.
-2. Click *Select image file(s)* and navigate to your desired image.
-3. For *Color Format*, select *CF_RAW*.
-4. Output format should be *C array*.
-5. Leave the boxes unchecked.  
-6. Click *Convert*.  The converted image will download automatically.
-7. Copy the downloaded .c file to `core/media/images`.
+For example, a 200x168 GIF needs about 90kB and a full screen 240x240 GIF needs about 140kB.  The RP2040 has 264kB of RAM in total and the RP2350 has 520kB, and the rest of the app needs some of that too.  If you flash a new image and it doesn't start running as expected, you've likely run out of memory.  Reduce the size of your animated GIF and try again.
 
 ### Modifying the source code
 
-The list of images lives in [`core/media/image_list.c`](core/media/image_list.c).  Images are shown in the order they're listed.  To add an image, declare it and add it to the list.  Substitute `your_image` for your image name (it's the same as the name of the downloaded .c file).  The second value says whether the image is an animated GIF: `false` for a static image, `true` for an animated GIF.
+The list of images lives in [`core/media/image_list.c`](core/media/image_list.c).  Images are shown in the order they're listed.  To add an image, declare it and add it to the list.  Substitute `your_image` for your image name (the name img2c.py printed, which is also the name of the .c file).  The second value says whether the image is an animated GIF: `false` for a static image, `true` for an animated GIF.
 
 ```
 LV_IMG_DECLARE(your_image);
@@ -141,6 +119,7 @@ To remove an image, just take it out of the list.  Images in `core/media/images`
 - `core/include/hal.h` - The small set of functions each board has to provide (display, touch, backlight, battery).
 - `platforms/pico/` - Build files for the Raspberry Pi RP2040/RP2350 boards.  `boards/*.cmake` lists the supported boards, and `boards/touch_lcd_1_28/` has the Waveshare drivers for the 1.28" round display.
 - `third_party/lvgl/` - The [LVGL](https://lvgl.io) graphics library (git submodule).
-- `imgs/` - Source images.
+- `tools/img2c.py` - Converts images and GIFs into C files for `core/media/images`.
+- `imgs/` - Source images.  The files in `core/media/images` are generated from these.
 
 The idea is to make it straightforward to add other displays and microcontrollers (ESP32-S3 is next) without copying the application code around.

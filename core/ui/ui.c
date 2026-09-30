@@ -78,7 +78,7 @@ parameter:
 ********************************************************************************/
 static void build_tiles(void)
 {
-    tileview = lv_tileview_create(lv_scr_act());
+    tileview = lv_tileview_create(lv_screen_active());
     lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
 
     // Images, the black tile, then brightness, rotation and startup image.
@@ -94,7 +94,7 @@ static void build_tiles(void)
     add_rotation_tile(tileview, num++);
     add_startup_tile(tileview, num++);
 
-    lv_obj_set_tile_id(tileview, 0, startup_tile_index(), LV_ANIM_OFF);
+    lv_tileview_set_tile_by_index(tileview, 0, startup_tile_index(), LV_ANIM_OFF);
 }
 
 static lv_dir_t tile_direction(uint8_t num)
@@ -144,12 +144,17 @@ static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num)
     if (pic->is_gif)
     {
         this_img = lv_gif_create(this_tile);
+        // Decode straight to RGB565 to use half the RAM of the ARGB8888 default.
+        lv_gif_set_color_format(this_img, LV_COLOR_FORMAT_RGB565);
         lv_gif_set_src(this_img, pic->img);
+        // Always loop forever. Some GIFs store a loop count, and LVGL 9.5 reads
+        // counts above 32767 as negative, which makes it stop after one pass.
+        lv_gif_set_loop_count(this_img, 0);
     }
     else
     {
-        this_img = lv_img_create(this_tile);
-        lv_img_set_src(this_img, pic->img);
+        this_img = lv_image_create(this_tile);
+        lv_image_set_src(this_img, pic->img);
     }
 
     lv_obj_align(this_img, LV_ALIGN_CENTER, 0, 0);
@@ -216,7 +221,7 @@ static void add_startup_tile(lv_obj_t *tv, uint8_t num)
     {
         len += strlen(media_images[i].name) + 1;
     }
-    char *options = lv_mem_alloc(len);
+    char *options = lv_malloc(len);
     options[0] = '\0';
     for (size_t i = 0; i < media_image_count; i++)
     {
@@ -227,7 +232,7 @@ static void add_startup_tile(lv_obj_t *tv, uint8_t num)
 
     lv_obj_t *startup_roller = lv_roller_create(startup_tile);
     lv_roller_set_options(startup_roller, options, LV_ROLLER_MODE_NORMAL);
-    lv_mem_free(options);   // the roller keeps its own copy
+    lv_free(options);   // the roller keeps its own copy
     lv_roller_set_visible_row_count(startup_roller, 3);
     lv_roller_set_selected(startup_roller, startup_tile_index(), LV_ANIM_OFF);
     lv_obj_center(startup_roller);
@@ -240,7 +245,7 @@ static void add_startup_tile(lv_obj_t *tv, uint8_t num)
 
 static void brightness_slider_event_cb(lv_event_t *e)
 {
-    lv_obj_t *brightness_slider = lv_event_get_target(e);
+    lv_obj_t *brightness_slider = lv_event_get_target_obj(e);
     uint8_t brightness = lv_slider_get_value(brightness_slider);
 
     lv_label_set_text_fmt(brightness_value_label, "%d%%", brightness);
@@ -251,7 +256,7 @@ static void brightness_slider_event_cb(lv_event_t *e)
 
 static void rotation_roller_event_cb(lv_event_t *e)
 {
-    lv_obj_t *rotation_roller = lv_event_get_target(e);
+    lv_obj_t *rotation_roller = lv_event_get_target_obj(e);
 
     // Roller options are 0, 90, 180 and 270 degrees.
     uint8_t rotation = lv_roller_get_selected(rotation_roller);
@@ -261,7 +266,7 @@ static void rotation_roller_event_cb(lv_event_t *e)
 
 static void startup_roller_event_cb(lv_event_t *e)
 {
-    lv_obj_t *startup_roller = lv_event_get_target(e);
+    lv_obj_t *startup_roller = lv_event_get_target_obj(e);
     uint16_t selected = lv_roller_get_selected(startup_roller);
 
     if (selected < media_image_count)

@@ -12,3 +12,6 @@ Makefile
 *~
 *.swp
 .vscode/
+
+# Python
+__pycache__/

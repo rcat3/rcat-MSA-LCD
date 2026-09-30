@@ -14,11 +14,11 @@
 
 #define IMAGE(name, is_gif) { #name, &name, is_gif }
 
-LV_IMG_DECLARE(home);
-LV_IMG_DECLARE(RCatLogo);
-LV_IMG_DECLARE(nonbinary);
-LV_IMG_DECLARE(hal9000);
-LV_IMG_DECLARE(evileye);
+LV_IMAGE_DECLARE(home);
+LV_IMAGE_DECLARE(RCatLogo);
+LV_IMAGE_DECLARE(nonbinary);
+LV_IMAGE_DECLARE(hal9000);
+LV_IMAGE_DECLARE(evileye);
 
 const media_image_t media_images[] = {
     IMAGE(home,      false),
