@@ -51,6 +51,11 @@ typedef void (*rcat_hal_audio_block_cb_t)(const int16_t *samples, size_t count, 
  * Returns false if the board has no microphone. */
 bool rcat_hal_audio_in_start(uint32_t sample_rate, rcat_hal_audio_block_cb_t cb, void *user_data);
 
+/* Mount removable storage (the SD card). On success, *path is set to where
+ * it's mounted, e.g. "/sdcard", for use with fopen() and friends. Returns
+ * false if the board has no card slot or no readable card. */
+bool rcat_hal_storage_mount(const char **path);
+
 void rcat_hal_delay_ms(uint32_t ms);
 
 #endif

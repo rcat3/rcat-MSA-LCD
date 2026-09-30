@@ -118,7 +118,7 @@ static void update_timer_cb(lv_timer_t *t)
 {
     lv_opa_t opa = LV_OPA_TRANSP;
 
-    if (!lv_obj_has_flag(ring, LV_OBJ_FLAG_HIDDEN))
+    if (!lv_obj_is_hidden(ring))
     {
         opa = (lv_opa_t)(audio_level_get() * LV_OPA_COVER / AUDIO_LEVEL_MAX);
     }
@@ -134,10 +134,11 @@ void voice_ring_create(void)
 {
     ring = lv_obj_create(lv_layer_top());
     lv_obj_remove_style_all(ring);
-    lv_obj_remove_flag(ring, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_clickable(ring, false);
+    lv_obj_set_scrollable(ring, false);
     lv_obj_set_size(ring, LV_PCT(100), LV_PCT(100));
     lv_obj_add_event_cb(ring, draw_event_cb, LV_EVENT_DRAW_MAIN, NULL);
-    lv_obj_add_flag(ring, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(ring, true);
 
     ring_color = lv_color_hex(colors[0].rgb);
     lv_timer_create(update_timer_cb, UPDATE_MS, NULL);
@@ -145,13 +146,9 @@ void voice_ring_create(void)
 
 void voice_ring_set_visible(bool visible)
 {
-    if (visible)
+    lv_obj_set_hidden(ring, !visible);
+    if (!visible)
     {
-        lv_obj_remove_flag(ring, LV_OBJ_FLAG_HIDDEN);
-    }
-    else
-    {
-        lv_obj_add_flag(ring, LV_OBJ_FLAG_HIDDEN);
         ring_opa = LV_OPA_TRANSP;
     }
 }

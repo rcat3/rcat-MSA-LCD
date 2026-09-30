@@ -185,6 +185,12 @@ bool rcat_hal_audio_in_start(uint32_t sample_rate, rcat_hal_audio_block_cb_t cb,
     return false;
 }
 
+bool rcat_hal_storage_mount(const char **path)
+{
+    // No card slot on this board.
+    return false;
+}
+
 void rcat_hal_delay_ms(uint32_t ms)
 {
     DEV_Delay_ms(ms);

@@ -1,5 +1,6 @@
 /*
- * The images shown on screen, in swipe order.
+ * The images built into the firmware, in swipe order. Images from the SD
+ * card (on boards that have one) are shown before these.
  *
  * To add an image, put it in imgs/ (PNG, BMP, JPG or animated GIF), then
  * declare it and add it to the list below. The build converts everything in
@@ -9,8 +10,6 @@
  * IMAGE(name, is_gif): name is the image's file name without the extension.
  * It's also what the Startup Image setting shows and saves.
  */
-#include <string.h>
-
 #include "media/image_list.h"
 
 #define IMAGE(name, is_gif) { #name, &name, is_gif }
@@ -21,7 +20,7 @@ LV_IMAGE_DECLARE(nonbinary);
 LV_IMAGE_DECLARE(hal9000);
 LV_IMAGE_DECLARE(evileye);
 
-const media_image_t media_images[] = {
+const builtin_image_t builtin_images[] = {
     IMAGE(home,      false),
     IMAGE(RCatLogo,  false),
     IMAGE(nonbinary, false),
@@ -29,16 +28,4 @@ const media_image_t media_images[] = {
     IMAGE(evileye,   true),
 };
 
-const size_t media_image_count = sizeof(media_images) / sizeof(media_images[0]);
-
-int media_find_image(const char *name)
-{
-    for (size_t i = 0; i < media_image_count; i++)
-    {
-        if (strcmp(media_images[i].name, name) == 0)
-        {
-            return (int)i;
-        }
-    }
-    return -1;
-}
+const size_t builtin_image_count = sizeof(builtin_images) / sizeof(builtin_images[0]);

@@ -49,12 +49,13 @@ Settings are saved about two seconds after you change them and are restored when
 - **Images** are converted for the 412x412 screen automatically when you build, so the same image files work on every board (see [Adding or Changing Images](#adding-or-changing-images)).
 - **Rotation:** The display controller can't rotate the picture by 90 degrees itself, so the ESP32 rotates it while drawing.  It's fast enough that you shouldn't notice.
 - **Microphone:** used for the KITT tile and the voice ring.
-- **Not used yet:** the speaker, TF card slot, IMU, clock chip, WiFi and Bluetooth.
+- **SD card:** images on the card are shown along with the built-in ones.  See [Images on the SD Card](#images-on-the-sd-card-esp32-s3-board).
+- **Not used yet:** the speaker, IMU, clock chip, WiFi and Bluetooth.
 - There isn't a 3D printed case for this board in the mask build yet.
 
 ## Software
 
-I created this project because I was having trouble with all of the other existing projects intended for this hardware.  They all failed to initialize the touch screen over I2C or were otherwise unreliable on my hardware.  The Waveshare example projects seemed to work fine, though.  Therefore, I started from the [Waveshare example project that uses the LVGL GUI library](https://www.waveshare.com/wiki/RP2040-Touch-LCD-1.28#LVGL_Example_Demo), and it has since grown to support more boards.  The LVGL library opens up a lot of cool possibilities for effects if you want to spend the time working with it.  Take a look at the [LVGL documentation](https://docs.lvgl.io/) to get an idea of what it's capable of (this project uses LVGL v9.5).
+I created this project because I was having trouble with all of the other existing projects intended for this hardware.  They all failed to initialize the touch screen over I2C or were otherwise unreliable on my hardware.  The Waveshare example projects seemed to work fine, though.  Therefore, I started from the [Waveshare example project that uses the LVGL GUI library](https://www.waveshare.com/wiki/RP2040-Touch-LCD-1.28#LVGL_Example_Demo), and it has since grown to support more boards.  The LVGL library opens up a lot of cool possibilities for effects if you want to spend the time working with it.  Take a look at the [LVGL documentation](https://docs.lvgl.io/) to get an idea of what it's capable of (this project uses LVGL v9.6).
 
 If you want to change the images, you'll need to rebuild the firmware and reflash the device.
 
@@ -158,6 +159,7 @@ A few things that can come up:
 - **The log stops at `waiting for download`.**  The board was reset into its programming mode instead of starting the firmware.  Press `Ctrl+T` then `Ctrl+R` in the monitor to reset it, or unplug it and plug it back in.
 - **The board isn't found when flashing.**  Hold the `BOOT` button while plugging in the USB cable, then try again.
 - **Watching the log without flashing:** `idf.py -C platforms/esp-idf -B build-s3-146 -p /dev/ttyACM0 monitor`
+- **After updating the code, a setting doesn't seem to take effect.**  ESP-IDF keeps its configuration in the build folder and doesn't apply new defaults to an existing one.  Delete the `build-s3-146` folder and build again.
 
 ## Adding or Changing Images
 
@@ -167,7 +169,7 @@ A few things that can come up:
    ```
    LV_IMAGE_DECLARE(your_image);
 
-   const media_image_t media_images[] = {
+   const builtin_image_t builtin_images[] = {
        ...
        IMAGE(your_image, false),
    };
@@ -177,11 +179,36 @@ A few things that can come up:
 
 The image name is also what shows up in the *Startup Image* setting.  To remove an image, just take it out of the list.  Images in `imgs/` that aren't in the list don't take up any space in the firmware.
 
+### Images on the SD Card (ESP32-S3 board)
+
+The ESP32-S3 board can also show images from its TF (micro SD) card, so you can change them without rebuilding the firmware.
+
+1. Format the card as FAT32 (most cards come that way) and make a folder called `images` on it.  If there's no `images` folder, the top level of the card is used instead.
+2. Copy PNG, JPG, BMP or animated GIF files into it.
+3. Put the card in the board and switch it on.  It shows *Loading images...* while it reads the card.
+
+The images from the card come first, sorted by file name, followed by the built-in images.  They can be picked in the *Startup Image* setting by their file name (without the extension).  If a card image has the same name as a built-in image, the card image is the one picked.  The card is only read when the board starts, so restart it after changing the card.
+
+Images are sized for the screen the same way as the built-in images (see below).  Static images are resized once, when they're loaded.  Animated GIFs are scaled while they play, which costs a little time on every frame and looks slightly softer.  For the best results, prepare images on your computer first with `tools/prepare_sd.py`.  It resizes GIFs and static images ahead of time and marks them as prepared, so the board shows them as they are:
+
+```
+python3 tools/prepare_sd.py my_images/*.gif my_images/*.png --size 412 --out /media/you/SDCARD/images
+```
+
+Use the path where your card is mounted.  `--size 412` is the screen size of the ESP32-S3 board.
+
+Limits:
+- Up to 32 images are loaded from the card.
+- Images can be up to 1024x1024 pixels.
+- BMP files must be 16, 24 or 32-bit (not 1, 4 or 8-bit).  Files that can't be read are skipped, and the reason is printed in the monitor log.
+- File names can be long, but only the first 23 characters (without the extension) are used for the *Startup Image* setting.
+- Hidden files (like the `._` files macOS leaves on cards) are ignored.
+
 ### Image sizes
 
 Images are drawn for a 240x240 screen.  On a bigger screen they're scaled up by the same amount, so a 240x240 image fills the 412x412 screen of the ESP32-S3 board, and a 120x120 image fills the middle half of either screen.  If an image is bigger than 240x240, it's treated as full screen artwork and scaled to fit each screen, so higher resolution artwork will look sharper on the bigger screen.
 
-Animated GIFs are re-encoded when they're converted, without transparent pixels and with a black background.  LVGL's GIF decoder draws transparent pixels in the background color instead of leaving the previous frame showing, which shows up as flashes of color in GIFs that use transparency to save space.  Because of this, a GIF can come out bigger than the original file.
+Animated GIFs that need resizing are re-encoded, without transparent pixels and with a black background, so a resized GIF can come out bigger than the original file.  GIFs that are already the right size are used as they are.
 
 The conversion is done by `tools/img2c.py`.  You don't normally need to run it yourself, but you can (for example `python3 tools/img2c.py imgs/home.bmp --size 412 --out home.c`) to see what it produces.
 
@@ -204,6 +231,8 @@ The ESP32-S3 board decodes GIFs into its 8MB of PSRAM, so even full screen GIFs 
 - `platforms/esp-idf/` - Build files for the ESP32 boards.  `boards/` has one folder per board with its drivers, pin assignments and settings.
 - `third_party/lvgl/` - The [LVGL](https://lvgl.io) graphics library (git submodule).
 - `tools/img2c.py` - Converts images and GIFs into C files.  The build runs it for every image in `imgs/`.
+- `tools/prepare_sd.py` - Resizes and re-encodes images for an SD card.
+- `tools/gen_lv_conf.py` - Generates the platforms' `lv_conf.h` files (LVGL settings) from the LVGL template.  Run it after updating the LVGL submodule.
 - `imgs/` - The images.
 
 Adding another display means adding a board folder with its HAL (`hal_board.c`) and its screen size, without copying the application code around.

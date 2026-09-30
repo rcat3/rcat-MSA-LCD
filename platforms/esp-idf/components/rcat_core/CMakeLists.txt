@@ -28,3 +28,6 @@ idf_component_register(SRCS ${CORE_SOURCES} ${IMAGE_SOURCES}
                        PRIV_INCLUDE_DIRS ${CORE_DIR}
                        REQUIRES lvgl
                        PRIV_REQUIRES ${board_component})
+
+# Images can be loaded from the SD card
+target_compile_definitions(${COMPONENT_LIB} PRIVATE RCAT_HAVE_FILESYSTEM=1)

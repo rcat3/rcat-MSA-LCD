@@ -35,7 +35,7 @@
 #include "audio/audio_level.h"
 #include "hal.h"
 #include "lvgl.h"
-#include "media/image_list.h"
+#include "media/media_library.h"
 #include "ui/kitt.h"
 #include "ui/ui.h"
 #include "ui/ui_internal.h"
@@ -76,7 +76,7 @@ int32_t ui_px(int32_t design_px)
 
 static void setup_theme(void);
 static void build_tiles(void);
-static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num);
+static void add_pic_tile(lv_obj_t *tv, const media_item_t *pic, uint8_t num);
 static void add_kitt_tile(lv_obj_t *tv, uint8_t num);
 static void add_black_tile(lv_obj_t *tv, uint8_t num);
 static void add_voice_ring_tile(lv_obj_t *tv, uint8_t num);
@@ -158,12 +158,12 @@ static void build_tiles(void)
     // then the settings: voice ring (if there's a microphone), brightness,
     // rotation and startup image.
     bool has_audio = audio_level_available();
-    tile_count = media_image_count + (has_audio ? 2 : 0) + 4;
+    tile_count = media_count() + (has_audio ? 2 : 0) + 4;
 
     uint8_t num = 0;
-    for (size_t i = 0; i < media_image_count; i++)
+    for (size_t i = 0; i < media_count(); i++)
     {
-        add_pic_tile(tileview, &media_images[i], num++);
+        add_pic_tile(tileview, media_get(i), num++);
     }
     if (has_audio)
     {
@@ -199,7 +199,7 @@ static void update_voice_ring(void)
     }
 
     int tile = lv_obj_get_index(lv_tileview_get_tile_active(tileview));
-    bool on_tile = tile < (int)media_image_count || tile == blank_tile || tile == ring_tile;
+    bool on_tile = tile < (int)media_count() || tile == blank_tile || tile == ring_tile;
 
     voice_ring_set_color(settings_get()->voice_ring_color);
     voice_ring_set_visible(settings_get()->voice_ring && on_tile);
@@ -243,11 +243,11 @@ static uint8_t startup_tile_index(void)
 
     // Unknown names (e.g. an image that's since been removed, or KITT on a
     // board without a microphone) fall back to the first image.
-    int index = media_find_image(name);
+    int index = media_find(name);
     return (index < 0) ? 0 : index;
 }
 
-static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num)
+static void add_pic_tile(lv_obj_t *tv, const media_item_t *pic, uint8_t num)
 {
     lv_obj_t *this_img;
 
@@ -263,15 +263,20 @@ static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num)
         this_img = lv_gif_create(this_tile);
         // Decode straight to RGB565 to use half the RAM of the ARGB8888 default.
         lv_gif_set_color_format(this_img, LV_COLOR_FORMAT_RGB565);
-        lv_gif_set_src(this_img, pic->img);
-        // Always loop forever. Some GIFs store a loop count, and LVGL 9.5 reads
+        lv_gif_set_src(this_img, pic->src);
+        // Always loop forever. Some GIFs store a loop count, and LVGL (9.5, 9.6) reads
         // counts above 32767 as negative, which makes it stop after one pass.
         lv_gif_set_loop_count(this_img, 0);
+        // GIFs from the SD card may need scaling for this screen.
+        if (pic->scale != LV_SCALE_NONE)
+        {
+            lv_image_set_scale(this_img, pic->scale);
+        }
     }
     else
     {
         this_img = lv_image_create(this_tile);
-        lv_image_set_src(this_img, pic->img);
+        lv_image_set_src(this_img, pic->src);
     }
 
     lv_obj_align(this_img, LV_ALIGN_CENTER, 0, 0);
@@ -379,15 +384,15 @@ static void add_startup_tile(lv_obj_t *tv, uint8_t num)
     // Roller options, in the same order as the tiles: every image name, then
     // "KITT" if there's a microphone, then "Blank", separated by newlines.
     size_t len = sizeof("KITT\nBlank");
-    for (size_t i = 0; i < media_image_count; i++)
+    for (size_t i = 0; i < media_count(); i++)
     {
-        len += strlen(media_images[i].name) + 1;
+        len += strlen(media_get(i)->name) + 1;
     }
     char *options = lv_malloc(len);
     options[0] = '\0';
-    for (size_t i = 0; i < media_image_count; i++)
+    for (size_t i = 0; i < media_count(); i++)
     {
-        strcat(options, media_images[i].name);
+        strcat(options, media_get(i)->name);
         strcat(options, "\n");
     }
     if (kitt_tile >= 0)
@@ -452,9 +457,9 @@ static void startup_roller_event_cb(lv_event_t *e)
     uint16_t selected = lv_roller_get_selected(startup_roller);
 
     // The roller options are in tile order.
-    if (selected < media_image_count)
+    if (selected < media_count())
     {
-        settings_set_startup_image(media_images[selected].name);
+        settings_set_startup_image(media_get(selected)->name);
     }
     else if ((int)selected == kitt_tile)
     {

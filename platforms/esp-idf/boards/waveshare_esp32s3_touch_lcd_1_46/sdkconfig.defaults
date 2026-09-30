@@ -15,3 +15,7 @@ CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
 
 # The USB-C port is the ESP32-S3's built-in USB serial/JTAG
 CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# SD card: long file names, so images keep their names
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_FATFS_MAX_LFN=255

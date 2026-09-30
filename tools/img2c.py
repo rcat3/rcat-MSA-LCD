@@ -6,8 +6,8 @@ The build runs this automatically for every image in imgs/, so you normally
 don't need to run it yourself.
 
 Static images (PNG, BMP, JPG, ...) are converted to RGB565 pixels.
-Animated GIFs are embedded as GIF data and decoded on the device. They're
-always re-encoded in a form LVGL draws correctly (see gif_for_lvgl).
+Animated GIFs are embedded as GIF data and decoded on the device. GIFs that
+need resizing are re-encoded (see gif_for_lvgl); others are used as they are.
 
 Sizing: images are drawn for a 240x240 screen. For a bigger screen (--size)
 they're scaled up by the same ratio, so they keep the same proportions. An
@@ -63,13 +63,12 @@ def rgb565(img):
     return out
 
 
-def gif_for_lvgl(img, size):
-    """Re-encode an animated GIF at the given size, in a form LVGL 9.5 draws
-    correctly. Its RGB565 GIF decoder paints transparent pixels with the
-    GIF's background color instead of leaving the previous frame showing,
-    which shows up as flashes of that color. So the output has no
-    transparency and a black background (the tile color). Frames are
-    flattened onto black."""
+def gif_for_lvgl(img, size, comment=None):
+    """Re-encode an animated GIF at the given size. Frames are flattened onto
+    black (the tile color), and the output has no transparency and a black
+    background. LVGL has had trouble with GIF transparency (9.5 painted
+    transparent pixels in the background color), so this keeps resized GIFs
+    simple for it to draw."""
     frames = []
     durations = []
     for frame in ImageSequence.Iterator(img):
@@ -93,8 +92,9 @@ def gif_for_lvgl(img, size):
     # optimize off it doesn't use transparent pixels to do it.
     darkest = min(range(256), key=lambda i: sum(palette.getpalette()[i * 3:i * 3 + 3]))
     out = io.BytesIO()
+    extra = {"comment": comment} if comment else {}
     frames[0].save(out, format="GIF", save_all=True, append_images=frames[1:],
-                   duration=durations, loop=0, optimize=False, background=darkest)
+                   duration=durations, loop=0, optimize=False, background=darkest, **extra)
     return out.getvalue()
 
 
@@ -121,7 +121,11 @@ def main():
     is_gif = img.format == "GIF"
 
     if is_gif:
-        data = gif_for_lvgl(img, (w, h))
+        if (w, h) == img.size:
+            with open(args.image, "rb") as f:
+                data = f.read()
+        else:
+            data = gif_for_lvgl(img, (w, h))
         cf, stride, kind = "LV_COLOR_FORMAT_RAW", 0, "GIF, decoded on the device"
     else:
         if (w, h) != img.size:

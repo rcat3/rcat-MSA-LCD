@@ -82,7 +82,8 @@ void kitt_create(lv_obj_t *parent)
         {
             lv_obj_t *segment = lv_obj_create(parent);
             lv_obj_remove_style_all(segment);
-            lv_obj_remove_flag(segment, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_set_clickable(segment, false);
+            lv_obj_set_scrollable(segment, false);
             lv_obj_set_size(segment, ui_px(SEGMENT_WIDTH), ui_px(SEGMENT_HEIGHT));
             lv_obj_set_style_bg_opa(segment, LV_OPA_COVER, 0);
             lv_obj_set_style_bg_color(segment, lv_color_hex(COLOR_UNLIT), 0);

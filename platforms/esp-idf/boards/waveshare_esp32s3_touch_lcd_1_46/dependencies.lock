@@ -75,6 +75,16 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 2.0.1
+  espressif/libjpeg-turbo:
+    component_hash: a146e0e06b3a978454804dfa34bc4dfc0165bdf80ad33ca358a3a7f393745a0e
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 3.2.0~1
   idf:
     source:
       type: idf
@@ -83,7 +93,8 @@ direct_dependencies:
 - espressif/esp_io_expander_tca9554
 - espressif/esp_lcd_spd2010
 - espressif/esp_lcd_touch_spd2010
+- espressif/libjpeg-turbo
 - idf
-manifest_hash: b30831da00138faafec44a81cc6e4ca867fbeee450ea97ab664b7a70ba03c7a2
+manifest_hash: c07bc868d42bfcc32e6006c2a0a6c4aedccafcb2a8c2450532eead35e9d9da39
 target: esp32s3
 version: 2.0.0

@@ -8,3 +8,6 @@ CONFIG_COMPILER_OPTIMIZATION_PERF=y
 
 # Use config/lv_conf.h instead of LVGL's menuconfig options
 # CONFIG_LV_CONF_SKIP is not set
+
+# Lets LVGL's component pull in libjpeg-turbo (enabled in config/lv_conf.h)
+CONFIG_LV_USE_LIBJPEG_TURBO=y

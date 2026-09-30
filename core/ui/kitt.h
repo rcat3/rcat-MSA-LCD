@@ -4,7 +4,7 @@
 #include "lvgl.h"
 
 /* Build a KITT style voice box (three columns of red bars that follow the
- * microphone level) centred in parent. Needs audio_level_start() first. */
+ * microphone level) centered in parent. Needs audio_level_start() first. */
 void kitt_create(lv_obj_t *parent);
 
 #endif
