@@ -1,11 +1,12 @@
 /*
  * The images shown on screen, in swipe order.
  *
- * To add an image, convert it to a C array (see the README), drop the .c file
- * into core/media/images/, then declare it and add it to the list below.
- * Images that aren't listed here are left out of the firmware by the linker.
+ * To add an image, put it in imgs/ (PNG, BMP, JPG or animated GIF), then
+ * declare it and add it to the list below. The build converts everything in
+ * imgs/ to the right size for the board's screen (see tools/img2c.py), and
+ * images that aren't listed here are left out of the firmware by the linker.
  *
- * IMAGE(name, is_gif): name is the variable name from the converted .c file.
+ * IMAGE(name, is_gif): name is the image's file name without the extension.
  * It's also what the Startup Image setting shows and saves.
  */
 #include <string.h>

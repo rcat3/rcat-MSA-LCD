@@ -2,26 +2,35 @@
 """
 Convert an image into a C file that can be compiled into the firmware (LVGL v9).
 
+The build runs this automatically for every image in imgs/, so you normally
+don't need to run it yourself.
+
 Static images (PNG, BMP, JPG, ...) are converted to RGB565 pixels.
-Animated GIFs are embedded as-is and decoded on the device.
+Animated GIFs are embedded as GIF data and decoded on the device. They're
+always re-encoded in a form LVGL draws correctly (see gif_for_lvgl).
+
+Sizing: images are drawn for a 240x240 screen. For a bigger screen (--size)
+they're scaled up by the same ratio, so they keep the same proportions. An
+image bigger than 240x240 is treated as full screen artwork and scaled to fit
+the screen.
 
 Usage:
-    python3 tools/img2c.py imgs/home.bmp
-    python3 tools/img2c.py imgs/evileye.gif --name evileye -o core/media/images
+    python3 tools/img2c.py imgs/home.bmp --size 412 --out build/home.c
 
-The variable name defaults to the file name (without extension). That name is
-what you add to core/media/image_list.c.
+The C variable name is the file name without its extension (or --name).
+That name is what goes in core/media/image_list.c.
 
 Needs Pillow:  pip install pillow
 """
 
 import argparse
+import io
 import os
 import re
-import sys
 
-from PIL import Image
+from PIL import Image, ImageSequence
 
+DESIGN_SIZE = 240
 BYTES_PER_LINE = 16
 
 
@@ -31,6 +40,15 @@ def c_name(path):
     if name[0].isdigit():
         name = "_" + name
     return name
+
+
+def scaled_size(w, h, screen_size):
+    """Output size of a w x h image on a screen_size x screen_size screen."""
+    design = max(DESIGN_SIZE, w, h)
+    if screen_size == design:
+        return w, h
+    scale = screen_size / design
+    return max(1, round(w * scale)), max(1, round(h * scale))
 
 
 def rgb565(img):
@@ -45,6 +63,41 @@ def rgb565(img):
     return out
 
 
+def gif_for_lvgl(img, size):
+    """Re-encode an animated GIF at the given size, in a form LVGL 9.5 draws
+    correctly. Its RGB565 GIF decoder paints transparent pixels with the
+    GIF's background colour instead of leaving the previous frame showing,
+    which shows up as flashes of that colour. So the output has no
+    transparency and a black background (the tile colour). Frames are
+    flattened onto black."""
+    frames = []
+    durations = []
+    for frame in ImageSequence.Iterator(img):
+        rgba = frame.convert("RGBA")
+        flat = Image.new("RGBA", rgba.size, (0, 0, 0, 255))
+        flat.alpha_composite(rgba)
+        frames.append(flat.convert("RGB").resize(size, Image.LANCZOS))
+        durations.append(frame.info.get("duration", 100))
+
+    # Use one palette for every frame, without dithering, so areas that don't
+    # change stay identical between frames. The GIF encoder then only stores
+    # what changed, like the original file did.
+    w, h = size
+    sheet = Image.new("RGB", (w, h * len(frames)))
+    for i, frame in enumerate(frames):
+        sheet.paste(frame, (0, i * h))
+    palette = sheet.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+    frames = [frame.quantize(palette=palette, dither=Image.Dither.NONE) for frame in frames]
+
+    # Pillow still only stores the changed area of each frame, but with
+    # optimize off it doesn't use transparent pixels to do it.
+    darkest = min(range(256), key=lambda i: sum(palette.getpalette()[i * 3:i * 3 + 3]))
+    out = io.BytesIO()
+    frames[0].save(out, format="GIF", save_all=True, append_images=frames[1:],
+                   duration=durations, loop=0, optimize=False, background=darkest)
+    return out.getvalue()
+
+
 def hex_lines(data):
     lines = []
     for i in range(0, len(data), BYTES_PER_LINE):
@@ -56,20 +109,23 @@ def hex_lines(data):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("image")
+    ap.add_argument("--size", type=int, default=DESIGN_SIZE,
+                    help="screen width/height in pixels (default: %(default)s)")
     ap.add_argument("--name", help="C variable name (default: file name)")
-    ap.add_argument("-o", "--out-dir", default="core/media/images", help="output folder (default: %(default)s)")
+    ap.add_argument("--out", help="output .c file (default: <name>.c in the current folder)")
     args = ap.parse_args()
 
     name = args.name or c_name(args.image)
     img = Image.open(args.image)
-    w, h = img.size
+    w, h = scaled_size(*img.size, args.size)
     is_gif = img.format == "GIF"
 
     if is_gif:
-        with open(args.image, "rb") as f:
-            data = f.read()
+        data = gif_for_lvgl(img, (w, h))
         cf, stride, kind = "LV_COLOR_FORMAT_RAW", 0, "GIF, decoded on the device"
     else:
+        if (w, h) != img.size:
+            img = img.convert("RGB").resize((w, h), Image.LANCZOS)
         data = rgb565(img)
         cf, stride, kind = "LV_COLOR_FORMAT_RGB565", w * 2, "RGB565"
 
@@ -96,14 +152,14 @@ const lv_image_dsc_t {name} = {{
     .data = {name}_map,
 }};
 """
-    os.makedirs(args.out_dir, exist_ok=True)
-    out_path = os.path.join(args.out_dir, name + ".c")
+    out_path = args.out or (name + ".c")
+    out_dir = os.path.dirname(out_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     with open(out_path, "w") as f:
         f.write(src)
 
     print(f"{out_path}: {name}, {w}x{h}, {'animated GIF' if is_gif else 'static image'}, {len(data)} bytes")
-    if w > 240 or h > 240:
-        print("  note: larger than the 240x240 screen", file=sys.stderr)
 
 
 if __name__ == "__main__":
