@@ -17,6 +17,8 @@ typedef struct
     uint8_t brightness;                     // backlight, percent
     uint8_t rotation;                       // display rotation, clockwise quarter turns
     char startup_image[SETTINGS_NAME_LEN];  // image name; empty means the first image
+    uint8_t voice_ring;                     // 1 to show the voice ring around the edge
+    uint8_t voice_ring_color;               // index into the voice ring color list
 } settings_t;
 
 /* Load the saved settings, or the defaults if nothing valid has been saved. */
@@ -30,5 +32,6 @@ const settings_t *settings_get(void);
 void settings_set_brightness(uint8_t percent);
 void settings_set_rotation(uint8_t quarter_turns);
 void settings_set_startup_image(const char *name);
+void settings_set_voice_ring(uint8_t enabled, uint8_t color);
 
 #endif

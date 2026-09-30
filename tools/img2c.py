@@ -66,9 +66,9 @@ def rgb565(img):
 def gif_for_lvgl(img, size):
     """Re-encode an animated GIF at the given size, in a form LVGL 9.5 draws
     correctly. Its RGB565 GIF decoder paints transparent pixels with the
-    GIF's background colour instead of leaving the previous frame showing,
-    which shows up as flashes of that colour. So the output has no
-    transparency and a black background (the tile colour). Frames are
+    GIF's background color instead of leaving the previous frame showing,
+    which shows up as flashes of that color. So the output has no
+    transparency and a black background (the tile color). Frames are
     flattened onto black."""
     frames = []
     durations = []

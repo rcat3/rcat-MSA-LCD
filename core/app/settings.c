@@ -30,6 +30,8 @@ static void set_defaults(settings_t *s)
     s->brightness = SETTINGS_DEFAULT_BRIGHTNESS;
     s->rotation = 0;
     s->startup_image[0] = '\0';
+    s->voice_ring = 0;
+    s->voice_ring_color = 0;
 }
 
 static uint32_t checksum(const void *data, size_t len)
@@ -69,6 +71,8 @@ static bool load(settings_t *out)
     }
     out->rotation &= 3;
     out->startup_image[SETTINGS_NAME_LEN - 1] = '\0';
+    out->voice_ring = out->voice_ring ? 1 : 0;
+    // voice_ring_color is checked against the color list by the UI
     return true;
 }
 
@@ -136,5 +140,12 @@ void settings_set_startup_image(const char *name)
     // strncpy zero-fills the rest, which keeps the memcmp in save_timer_cb honest.
     strncpy(current.startup_image, name, SETTINGS_NAME_LEN - 1);
     current.startup_image[SETTINGS_NAME_LEN - 1] = '\0';
+    schedule_save();
+}
+
+void settings_set_voice_ring(uint8_t enabled, uint8_t color)
+{
+    current.voice_ring = enabled ? 1 : 0;
+    current.voice_ring_color = color;
     schedule_save();
 }

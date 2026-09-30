@@ -32,11 +32,14 @@ Other things you'll need:
 
 ## Using the Display
 
-Swipe up and down to move between images.  After the images there's a blank (black) tile, followed by the settings tiles:
+Swipe up and down to move between images.  On boards with a microphone (currently the ESP32-S3 board), the images are followed by a **KITT** tile: three columns of red bars that light up with your voice, like KITT's voice box in Knight Rider.  Next there's a blank (black) tile, followed by the settings tiles:
 
+- **Voice Ring** (boards with a microphone) - Turns on a ring around the edge of the screen that glows with your voice, and picks its color.  The ring shows on the image tiles and the blank tile.
 - **Brightness** - Drag the slider to set the backlight brightness.  This tile also shows the battery voltage.
 - **Rotation** - Rotates the whole display in 90 degree steps.  This helps if the display ends up sitting at an angle in the mask's threads.  The new rotation is applied about a second after you stop scrolling the roller, so you can scroll past options without the screen turning under your finger.
-- **Startup Image** - Picks the image that's shown when the display turns on.  *Blank* starts on the black tile.
+- **Startup Image** - Picks the image that's shown when the display turns on.  *KITT* starts on the KITT tile and *Blank* starts on the black tile.
+
+The KITT bars and the voice ring adjust to the surroundings on their own.  A quiet room stays dark, normal talking uses most of the range, and they scale back for loud talking or a noisy room (it takes a few seconds to adjust).
 
 Settings are saved about two seconds after you change them and are restored when the display is powered back on.  They also survive flashing new firmware.
 
@@ -45,7 +48,8 @@ Settings are saved about two seconds after you change them and are restored when
 - **Power:** The board runs from USB-C or from a 3.7V LiPo battery on its 2-pin MX1.25 connector (check the polarity before plugging a battery in).  On battery, press the `PWR` button on the side to turn it on.  The firmware keeps the power switched on after you let go.  Hold `PWR` for 2 seconds to turn it off.
 - **Images** are converted for the 412x412 screen automatically when you build, so the same image files work on every board (see [Adding or Changing Images](#adding-or-changing-images)).
 - **Rotation:** The display controller can't rotate the picture by 90 degrees itself, so the ESP32 rotates it while drawing.  It's fast enough that you shouldn't notice.
-- **Not used yet:** the microphone, speaker, TF card slot, IMU, clock chip, WiFi and Bluetooth.  Sound-reactive effects are planned.
+- **Microphone:** used for the KITT tile and the voice ring.
+- **Not used yet:** the speaker, TF card slot, IMU, clock chip, WiFi and Bluetooth.
 - There isn't a 3D printed case for this board in the mask build yet.
 
 ## Software
@@ -177,7 +181,7 @@ The image name is also what shows up in the *Startup Image* setting.  To remove 
 
 Images are drawn for a 240x240 screen.  On a bigger screen they're scaled up by the same amount, so a 240x240 image fills the 412x412 screen of the ESP32-S3 board, and a 120x120 image fills the middle half of either screen.  If an image is bigger than 240x240, it's treated as full screen artwork and scaled to fit each screen, so higher resolution artwork will look sharper on the bigger screen.
 
-Animated GIFs are re-encoded when they're converted, without transparent pixels and with a black background.  LVGL's GIF decoder draws transparent pixels in the background colour instead of leaving the previous frame showing, which shows up as flashes of colour in GIFs that use transparency to save space.  Because of this, a GIF can come out bigger than the original file.
+Animated GIFs are re-encoded when they're converted, without transparent pixels and with a black background.  LVGL's GIF decoder draws transparent pixels in the background color instead of leaving the previous frame showing, which shows up as flashes of color in GIFs that use transparency to save space.  Because of this, a GIF can come out bigger than the original file.
 
 The conversion is done by `tools/img2c.py`.  You don't normally need to run it yourself, but you can (for example `python3 tools/img2c.py imgs/home.bmp --size 412 --out home.c`) to see what it produces.
 

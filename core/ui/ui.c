@@ -39,6 +39,7 @@
 #include "ui/kitt.h"
 #include "ui/ui.h"
 #include "ui/ui_internal.h"
+#include "ui/voice_ring.h"
 
 #define BATTERY_UPDATE_MS 1000
 
@@ -55,6 +56,9 @@ static lv_obj_t *brightness_value_label;
 static uint8_t tile_count;
 static int kitt_tile = -1;      // -1 when the board has no microphone
 static uint8_t blank_tile;
+static int ring_tile = -1;      // -1 when the board has no microphone
+static lv_obj_t *ring_switch;
+static lv_obj_t *ring_roller;
 static int32_t screen_size;
 static lv_timer_t *rotation_timer;
 static uint8_t pending_rotation;
@@ -75,6 +79,10 @@ static void build_tiles(void);
 static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num);
 static void add_kitt_tile(lv_obj_t *tv, uint8_t num);
 static void add_black_tile(lv_obj_t *tv, uint8_t num);
+static void add_voice_ring_tile(lv_obj_t *tv, uint8_t num);
+static void update_voice_ring(void);
+static void tileview_event_cb(lv_event_t *e);
+static void voice_ring_event_cb(lv_event_t *e);
 static void add_brightness_tile(lv_obj_t *tv, uint8_t num);
 static void add_rotation_tile(lv_obj_t *tv, uint8_t num);
 static void add_startup_tile(lv_obj_t *tv, uint8_t num);
@@ -92,6 +100,10 @@ parameter:
 void ui_init(void)
 {
     setup_theme();
+    if (audio_level_available())
+    {
+        voice_ring_create();
+    }
     build_tiles();
 
     float volts;
@@ -143,27 +155,59 @@ static void build_tiles(void)
     lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
 
     // Images, the KITT voice box (if there's a microphone), the black tile,
-    // then brightness, rotation and startup image.
-    bool has_kitt = audio_level_available();
-    tile_count = media_image_count + (has_kitt ? 1 : 0) + 4;
+    // then the settings: voice ring (if there's a microphone), brightness,
+    // rotation and startup image.
+    bool has_audio = audio_level_available();
+    tile_count = media_image_count + (has_audio ? 2 : 0) + 4;
 
     uint8_t num = 0;
     for (size_t i = 0; i < media_image_count; i++)
     {
         add_pic_tile(tileview, &media_images[i], num++);
     }
-    if (has_kitt)
+    if (has_audio)
     {
         kitt_tile = num;
         add_kitt_tile(tileview, num++);
     }
     blank_tile = num;
     add_black_tile(tileview, num++);
+    if (has_audio)
+    {
+        ring_tile = num;
+        add_voice_ring_tile(tileview, num++);
+    }
     add_brightness_tile(tileview, num++);
     add_rotation_tile(tileview, num++);
     add_startup_tile(tileview, num++);
 
     lv_tileview_set_tile_by_index(tileview, 0, startup_tile_index(), LV_ANIM_OFF);
+    lv_obj_add_event_cb(tileview, tileview_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    update_voice_ring();
+}
+
+/********************************************************************************
+function:	Show the voice ring if it's switched on and the current tile is one
+            it belongs on: the images, the black tile and its own settings tile
+parameter:
+********************************************************************************/
+static void update_voice_ring(void)
+{
+    if (ring_tile < 0)
+    {
+        return;
+    }
+
+    int tile = lv_obj_get_index(lv_tileview_get_tile_active(tileview));
+    bool on_tile = tile < (int)media_image_count || tile == blank_tile || tile == ring_tile;
+
+    voice_ring_set_color(settings_get()->voice_ring_color);
+    voice_ring_set_visible(settings_get()->voice_ring && on_tile);
+}
+
+static void tileview_event_cb(lv_event_t *e)
+{
+    update_voice_ring();
 }
 
 static lv_dir_t tile_direction(uint8_t num)
@@ -246,6 +290,42 @@ static void add_black_tile(lv_obj_t *tv, uint8_t num)
     lv_obj_t *this_tile = lv_tileview_add_tile(tv, 0, num, tile_direction(num));
     lv_obj_set_style_bg_color(this_tile, lv_color_black(), 0);
     lv_obj_set_style_bg_opa(this_tile, LV_OPA_COVER, 0);
+}
+
+static void add_voice_ring_tile(lv_obj_t *tv, uint8_t num)
+{
+    lv_obj_t *ring_tile_obj = lv_tileview_add_tile(tv, 0, num, tile_direction(num));
+
+    lv_obj_t *title = lv_label_create(ring_tile_obj);
+    lv_label_set_text(title, "Voice Ring");
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, px(32));
+
+    ring_switch = lv_switch_create(ring_tile_obj);
+    if (settings_get()->voice_ring)
+    {
+        lv_obj_add_state(ring_switch, LV_STATE_CHECKED);
+    }
+    lv_obj_align_to(ring_switch, title, LV_ALIGN_OUT_BOTTOM_MID, 0, px(8));
+    lv_obj_add_event_cb(ring_switch, voice_ring_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+
+    uint8_t color = settings_get()->voice_ring_color;
+    if (color >= voice_ring_color_count())
+    {
+        color = 0;
+    }
+    ring_roller = lv_roller_create(ring_tile_obj);
+    lv_roller_set_options(ring_roller, voice_ring_color_options(), LV_ROLLER_MODE_NORMAL);
+    lv_roller_set_visible_row_count(ring_roller, 3);
+    lv_roller_set_selected(ring_roller, color, LV_ANIM_OFF);
+    lv_obj_align(ring_roller, LV_ALIGN_CENTER, 0, px(28));
+    lv_obj_add_event_cb(ring_roller, voice_ring_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+static void voice_ring_event_cb(lv_event_t *e)
+{
+    settings_set_voice_ring(lv_obj_has_state(ring_switch, LV_STATE_CHECKED),
+                            lv_roller_get_selected(ring_roller));
+    update_voice_ring();
 }
 
 static void add_brightness_tile(lv_obj_t *tv, uint8_t num)
