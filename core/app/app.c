@@ -6,21 +6,21 @@
 
 void app_run(void)
 {
-    if (hal_init() != 0)
+    if (rcat_hal_init() != 0)
     {
         return;
     }
     settings_init();
-    hal_backlight_set(settings_get()->brightness);
+    rcat_hal_backlight_set(settings_get()->brightness);
 
     lv_init();
-    hal_lvgl_register();
-    hal_display_set_rotation(settings_get()->rotation);
+    rcat_hal_lvgl_register();
+    rcat_hal_display_set_rotation(settings_get()->rotation);
     ui_init();
 
     while (1)
     {
         lv_timer_handler();
-        hal_delay_ms(5);
+        rcat_hal_delay_ms(5);
     }
 }

@@ -39,11 +39,22 @@
 
 #define BATTERY_UPDATE_MS 1000
 
+// The layout was designed for a 240x240 screen and is scaled up for bigger ones.
+#define DESIGN_SIZE 240
+
 static lv_obj_t *tileview;
 static lv_obj_t *battery_label;
 static lv_obj_t *brightness_value_label;
 static uint8_t tile_count;
+static int32_t screen_size;
 
+/* Scale a size or offset from the 240x240 design to this screen. */
+static int32_t px(int32_t design_px)
+{
+    return design_px * screen_size / DESIGN_SIZE;
+}
+
+static void setup_theme(void);
 static void build_tiles(void);
 static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num);
 static void add_black_tile(lv_obj_t *tv, uint8_t num);
@@ -62,14 +73,46 @@ parameter:
 ********************************************************************************/
 void ui_init(void)
 {
+    setup_theme();
     build_tiles();
 
     float volts;
-    if (hal_battery_voltage(&volts))
+    if (rcat_hal_battery_voltage(&volts))
     {
         lv_timer_t *timer = lv_timer_create(battery_timer_cb, BATTERY_UPDATE_MS, NULL);
         lv_timer_ready(timer);
     }
+}
+
+/********************************************************************************
+function:	Scale the theme (font, padding) to the screen size
+parameter:
+********************************************************************************/
+static void setup_theme(void)
+{
+    lv_display_t *disp = lv_display_get_default();
+    screen_size = LV_MIN(lv_display_get_horizontal_resolution(disp),
+                         lv_display_get_vertical_resolution(disp));
+
+    if (screen_size == DESIGN_SIZE)
+    {
+        return;     // the defaults are what the layout was designed with
+    }
+
+    // The theme sizes its padding and knobs from the DPI.
+    lv_display_set_dpi(disp, px(LV_DPI_DEF));
+
+    const lv_font_t *font = LV_FONT_DEFAULT;
+#if LV_FONT_MONTSERRAT_24
+    if (screen_size >= 360)
+    {
+        font = &lv_font_montserrat_24;
+    }
+#endif
+    lv_theme_t *theme = lv_theme_default_init(disp, lv_palette_main(LV_PALETTE_BLUE),
+                                              lv_palette_main(LV_PALETTE_RED),
+                                              false, font);
+    lv_display_set_theme(disp, theme);
 }
 
 /********************************************************************************
@@ -173,7 +216,7 @@ static void add_brightness_tile(lv_obj_t *tv, uint8_t num)
 
     // Brightness slider
     lv_obj_t *brightness_slider = lv_slider_create(brightness_tile);
-    lv_obj_set_size(brightness_slider, 200, 20);
+    lv_obj_set_size(brightness_slider, px(200), px(20));
     lv_slider_set_range(brightness_slider, 1, 100);
     lv_slider_set_value(brightness_slider, settings_get()->brightness, LV_ANIM_OFF);
     lv_obj_center(brightness_slider);
@@ -181,16 +224,16 @@ static void add_brightness_tile(lv_obj_t *tv, uint8_t num)
 
     brightness_value_label = lv_label_create(brightness_tile);
     lv_label_set_text_fmt(brightness_value_label, "%d%%", settings_get()->brightness);
-    lv_obj_align_to(brightness_value_label, brightness_slider, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+    lv_obj_align_to(brightness_value_label, brightness_slider, LV_ALIGN_OUT_BOTTOM_MID, 0, px(10));
 
     lv_obj_t *brightness_label = lv_label_create(brightness_tile);
     lv_label_set_text(brightness_label, "Brightness");
-    lv_obj_align_to(brightness_label, brightness_slider, LV_ALIGN_OUT_TOP_MID, 0, -10);
+    lv_obj_align_to(brightness_label, brightness_slider, LV_ALIGN_OUT_TOP_MID, 0, px(-10));
 
     // Battery voltage label
     battery_label = lv_label_create(brightness_tile);
     lv_label_set_text(battery_label, "");
-    lv_obj_align(battery_label, LV_ALIGN_TOP_MID, 0, 35);
+    lv_obj_align(battery_label, LV_ALIGN_TOP_MID, 0, px(35));
 }
 
 static void add_rotation_tile(lv_obj_t *tv, uint8_t num)
@@ -208,7 +251,7 @@ static void add_rotation_tile(lv_obj_t *tv, uint8_t num)
 
     lv_obj_t *rotation_label = lv_label_create(rotation_tile);
     lv_label_set_text(rotation_label, "Rotation");
-    lv_obj_align_to(rotation_label, rotation_roller, LV_ALIGN_OUT_TOP_MID, 0, -10);
+    lv_obj_align_to(rotation_label, rotation_roller, LV_ALIGN_OUT_TOP_MID, 0, px(-10));
 }
 
 static void add_startup_tile(lv_obj_t *tv, uint8_t num)
@@ -240,7 +283,7 @@ static void add_startup_tile(lv_obj_t *tv, uint8_t num)
 
     lv_obj_t *startup_label = lv_label_create(startup_tile);
     lv_label_set_text(startup_label, "Startup Image");
-    lv_obj_align_to(startup_label, startup_roller, LV_ALIGN_OUT_TOP_MID, 0, -10);
+    lv_obj_align_to(startup_label, startup_roller, LV_ALIGN_OUT_TOP_MID, 0, px(-10));
 }
 
 static void brightness_slider_event_cb(lv_event_t *e)
@@ -249,8 +292,8 @@ static void brightness_slider_event_cb(lv_event_t *e)
     uint8_t brightness = lv_slider_get_value(brightness_slider);
 
     lv_label_set_text_fmt(brightness_value_label, "%d%%", brightness);
-    lv_obj_align_to(brightness_value_label, brightness_slider, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
-    hal_backlight_set(brightness);
+    lv_obj_align_to(brightness_value_label, brightness_slider, LV_ALIGN_OUT_BOTTOM_MID, 0, px(10));
+    rcat_hal_backlight_set(brightness);
     settings_set_brightness(brightness);
 }
 
@@ -260,7 +303,7 @@ static void rotation_roller_event_cb(lv_event_t *e)
 
     // Roller options are 0, 90, 180 and 270 degrees.
     uint8_t rotation = lv_roller_get_selected(rotation_roller);
-    hal_display_set_rotation(rotation);
+    rcat_hal_display_set_rotation(rotation);
     settings_set_rotation(rotation);
 }
 
@@ -284,7 +327,7 @@ static void battery_timer_cb(lv_timer_t *t)
     float volts;
     char label_text[20];
 
-    if (hal_battery_voltage(&volts))
+    if (rcat_hal_battery_voltage(&volts))
     {
         snprintf(label_text, sizeof(label_text), "Battery: %.2fV", volts);
         lv_label_set_text(battery_label, label_text);

@@ -48,7 +48,7 @@ static bool load(settings_t *out)
 {
     settings_record_t rec;
 
-    if (!hal_settings_read(&rec, sizeof(rec))
+    if (!rcat_hal_settings_read(&rec, sizeof(rec))
         || rec.magic != SETTINGS_MAGIC
         || rec.version != SETTINGS_VERSION
         || rec.size == 0
@@ -103,7 +103,7 @@ static void save_timer_cb(lv_timer_t *t)
     rec.values = current;
     rec.checksum = checksum(&rec.values, rec.size);
 
-    if (hal_settings_write(&rec, sizeof(rec)))
+    if (rcat_hal_settings_write(&rec, sizeof(rec)))
     {
         saved = current;
     }

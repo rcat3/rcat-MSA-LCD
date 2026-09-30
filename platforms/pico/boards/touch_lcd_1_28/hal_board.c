@@ -66,7 +66,7 @@ static void ts_read_cb(lv_indev_t *indev, lv_indev_data_t *data);
 static void dma_handler(void);
 static uint32_t tick_get_cb(void);
 
-int hal_init(void)
+int rcat_hal_init(void)
 {
     if (DEV_Module_Init() != 0)
     {
@@ -83,7 +83,7 @@ function:	Register the display and touch screen with LVGL, then enable the
             DMA IRQ used for flushing
 parameter:
 ********************************************************************************/
-void hal_lvgl_register(void)
+void rcat_hal_lvgl_register(void)
 {
     lv_tick_set_cb(tick_get_cb);
 
@@ -104,7 +104,7 @@ void hal_lvgl_register(void)
     irq_set_enabled(DMA_IRQ_0, true);
 }
 
-void hal_display_set_rotation(uint8_t quarter_turns)
+void rcat_hal_display_set_rotation(uint8_t quarter_turns)
 {
     // The command goes over the same SPI bus as the DMA flush, so let any
     // transfer in progress finish first.
@@ -120,12 +120,12 @@ void hal_display_set_rotation(uint8_t quarter_turns)
     lv_obj_invalidate(lv_screen_active());
 }
 
-void hal_backlight_set(uint8_t percent)
+void rcat_hal_backlight_set(uint8_t percent)
 {
     DEV_SET_PWM(percent);
 }
 
-bool hal_battery_voltage(float *volts)
+bool rcat_hal_battery_voltage(float *volts)
 {
     // The battery is measured through a 1/3 voltage divider.
     const float conversion_factor = 3.3f / (1 << 12) * 3;
@@ -133,7 +133,7 @@ bool hal_battery_voltage(float *volts)
     return true;
 }
 
-bool hal_settings_read(void *data, size_t len)
+bool rcat_hal_settings_read(void *data, size_t len)
 {
     if (len > FLASH_PAGE_SIZE)
     {
@@ -162,7 +162,7 @@ static void settings_write_cb(void *param)
     flash_range_program(SETTINGS_FLASH_OFFSET, page, FLASH_PAGE_SIZE);
 }
 
-bool hal_settings_write(const void *data, size_t len)
+bool rcat_hal_settings_write(const void *data, size_t len)
 {
     if (len > FLASH_PAGE_SIZE)
     {
@@ -179,7 +179,7 @@ bool hal_settings_write(const void *data, size_t len)
     return flash_safe_execute(settings_write_cb, &w, 100) == PICO_OK;
 }
 
-void hal_delay_ms(uint32_t ms)
+void rcat_hal_delay_ms(uint32_t ms)
 {
     DEV_Delay_ms(ms);
 }
