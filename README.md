@@ -23,7 +23,7 @@ Other things you'll need:
 
 I created this project because I was having trouble with all of the other existing projects intended for this hardware.  They all failed to initialize the touch screen over I2C or were otherwise unreliable on my hardware.  The Waveshare example projects seemed to work fine, though.  Therefore, I just hacked this together from the [Waveshare example project that uses the LVGL GUI library](https://www.waveshare.com/wiki/RP2040-Touch-LCD-1.28#LVGL_Example_Demo).  The LVGL library opens up a lot of cool possibilities for effects if you want to spend the time working with it.  Take a look at the [LVGL documentation](https://docs.lvgl.io/8.1/) to get an idea of what it's capable of.  The original demo can be downloaded from [this link](https://files.waveshare.com/upload/1/16/RP2040-Touch-LCD-1.28-LVGL.zip).
 
-My implementation originally focused on displaying static images, but it now supports small animated GIFs as well.  You can swipe up/down to change images.  The last few tiles in the sequence allow you to adjust the LCD brightness, view the battery voltage, and rotate the images.  Image rotation might be helpful if you're having trouble orienting the LCD display properly in the MSA's VPU threads.
+My implementation originally focused on displaying static images, but it now supports small animated GIFs as well.  You can swipe up/down to change images.  The last few tiles in the sequence allow you to adjust the LCD brightness, view the battery voltage, rotate the display, and pick which image is shown at startup.  Rotation might be helpful if you're having trouble orienting the LCD display properly in the MSA's VPU threads.  These settings are saved and restored when the display is powered back on.
 
 If you want to change the images, you'll need to rebuild the software image and reflash the device.
 
@@ -127,9 +127,11 @@ LV_IMG_DECLARE(your_image);
 
 const media_image_t media_images[] = {
     ...
-    { &your_image, false },
+    IMAGE(your_image, false),
 };
 ```
+
+The image name is also what shows up in the *Startup Image* setting.
 
 To remove an image, just take it out of the list.  Images in `core/media/images` that aren't in the list don't take up any space in the firmware.
 

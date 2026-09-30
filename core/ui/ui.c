@@ -29,6 +29,7 @@
 ******************************************************************************/
 
 #include <stdio.h>
+#include <string.h>
 
 #include "app/settings.h"
 #include "hal.h"
@@ -41,14 +42,18 @@
 static lv_obj_t *tileview;
 static lv_obj_t *battery_label;
 static lv_obj_t *brightness_value_label;
+static uint8_t tile_count;
 
 static void build_tiles(void);
 static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num);
 static void add_black_tile(lv_obj_t *tv, uint8_t num);
 static void add_brightness_tile(lv_obj_t *tv, uint8_t num);
 static void add_rotation_tile(lv_obj_t *tv, uint8_t num);
+static void add_startup_tile(lv_obj_t *tv, uint8_t num);
+static uint8_t startup_tile_index(void);
 static void brightness_slider_event_cb(lv_event_t *e);
 static void rotation_roller_event_cb(lv_event_t *e);
+static void startup_roller_event_cb(lv_event_t *e);
 static void battery_timer_cb(lv_timer_t *t);
 
 /********************************************************************************
@@ -76,6 +81,9 @@ static void build_tiles(void)
     tileview = lv_tileview_create(lv_scr_act());
     lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
 
+    // Images, the black tile, then brightness, rotation and startup image.
+    tile_count = media_image_count + 4;
+
     uint8_t num = 0;
     for (size_t i = 0; i < media_image_count; i++)
     {
@@ -84,12 +92,42 @@ static void build_tiles(void)
     add_black_tile(tileview, num++);
     add_brightness_tile(tileview, num++);
     add_rotation_tile(tileview, num++);
+    add_startup_tile(tileview, num++);
+
+    lv_obj_set_tile_id(tileview, 0, startup_tile_index(), LV_ANIM_OFF);
 }
 
 static lv_dir_t tile_direction(uint8_t num)
 {
-    // The first tile can only swipe down. All others can swipe up and down.
-    return (num == 0) ? LV_DIR_BOTTOM : (LV_DIR_TOP | LV_DIR_BOTTOM);
+    // The first tile can only swipe down and the last can only swipe up.
+    if (num == 0)
+    {
+        return LV_DIR_BOTTOM;
+    }
+    if (num == tile_count - 1)
+    {
+        return LV_DIR_TOP;
+    }
+    return LV_DIR_TOP | LV_DIR_BOTTOM;
+}
+
+/********************************************************************************
+function:	Tile to show at startup, from the saved startup image name
+parameter:
+********************************************************************************/
+static uint8_t startup_tile_index(void)
+{
+    const char *name = settings_get()->startup_image;
+
+    if (strcmp(name, SETTINGS_STARTUP_BLANK) == 0)
+    {
+        // The black tile comes right after the images.
+        return media_image_count;
+    }
+
+    // Unknown names (e.g. an image that's since been removed) fall back to the first image.
+    int index = media_find_image(name);
+    return (index < 0) ? 0 : index;
 }
 
 static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num)
@@ -152,8 +190,7 @@ static void add_brightness_tile(lv_obj_t *tv, uint8_t num)
 
 static void add_rotation_tile(lv_obj_t *tv, uint8_t num)
 {
-    // Last tile, so it can only swipe up.
-    lv_obj_t *rotation_tile = lv_tileview_add_tile(tv, 0, num, LV_DIR_TOP);
+    lv_obj_t *rotation_tile = lv_tileview_add_tile(tv, 0, num, tile_direction(num));
 
     // Display rotation roller.
     lv_obj_t *rotation_roller = lv_roller_create(rotation_tile);
@@ -167,6 +204,38 @@ static void add_rotation_tile(lv_obj_t *tv, uint8_t num)
     lv_obj_t *rotation_label = lv_label_create(rotation_tile);
     lv_label_set_text(rotation_label, "Rotation");
     lv_obj_align_to(rotation_label, rotation_roller, LV_ALIGN_OUT_TOP_MID, 0, -10);
+}
+
+static void add_startup_tile(lv_obj_t *tv, uint8_t num)
+{
+    lv_obj_t *startup_tile = lv_tileview_add_tile(tv, 0, num, tile_direction(num));
+
+    // Roller options: every image name, then "Blank", separated by newlines.
+    size_t len = sizeof("Blank");
+    for (size_t i = 0; i < media_image_count; i++)
+    {
+        len += strlen(media_images[i].name) + 1;
+    }
+    char *options = lv_mem_alloc(len);
+    options[0] = '\0';
+    for (size_t i = 0; i < media_image_count; i++)
+    {
+        strcat(options, media_images[i].name);
+        strcat(options, "\n");
+    }
+    strcat(options, "Blank");
+
+    lv_obj_t *startup_roller = lv_roller_create(startup_tile);
+    lv_roller_set_options(startup_roller, options, LV_ROLLER_MODE_NORMAL);
+    lv_mem_free(options);   // the roller keeps its own copy
+    lv_roller_set_visible_row_count(startup_roller, 3);
+    lv_roller_set_selected(startup_roller, startup_tile_index(), LV_ANIM_OFF);
+    lv_obj_center(startup_roller);
+    lv_obj_add_event_cb(startup_roller, startup_roller_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_t *startup_label = lv_label_create(startup_tile);
+    lv_label_set_text(startup_label, "Startup Image");
+    lv_obj_align_to(startup_label, startup_roller, LV_ALIGN_OUT_TOP_MID, 0, -10);
 }
 
 static void brightness_slider_event_cb(lv_event_t *e)
@@ -188,6 +257,21 @@ static void rotation_roller_event_cb(lv_event_t *e)
     uint8_t rotation = lv_roller_get_selected(rotation_roller);
     hal_display_set_rotation(rotation);
     settings_set_rotation(rotation);
+}
+
+static void startup_roller_event_cb(lv_event_t *e)
+{
+    lv_obj_t *startup_roller = lv_event_get_target(e);
+    uint16_t selected = lv_roller_get_selected(startup_roller);
+
+    if (selected < media_image_count)
+    {
+        settings_set_startup_image(media_images[selected].name);
+    }
+    else
+    {
+        settings_set_startup_image(SETTINGS_STARTUP_BLANK);
+    }
 }
 
 static void battery_timer_cb(lv_timer_t *t)
