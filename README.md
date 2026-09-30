@@ -32,7 +32,7 @@ Other things you'll need:
 
 ## Using the Display
 
-The display is organized into features.  **Swipe up and down** to move between features, and **swipe left and right** to move between the pages of a feature.  Each feature remembers which page you were on.
+The display is organized into features.  **Swipe up and down** to move between features, and **swipe left and right** to move between the pages of a feature.  Each feature remembers which page you were on.  After each swipe, dots along the right edge show which feature you're in and dots along the bottom show which page (or "3 / 26" when there are a lot of pages).  They fade out after a moment.
 
 | Feature | Pages (left to right) |
 |---|---|

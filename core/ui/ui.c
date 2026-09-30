@@ -32,6 +32,7 @@
 
 #include "app/settings.h"
 #include "lvgl.h"
+#include "ui/nav_dots.h"
 #include "ui/ui.h"
 #include "ui/ui_internal.h"
 
@@ -118,6 +119,7 @@ void ui_init(void)
         }
     }
 
+    nav_dots_create();      // after the features, so it's drawn over the voice ring
     show_startup_page();
     navigate_event_cb(NULL);
 }
@@ -242,6 +244,16 @@ static void show_startup_page(void)
 /* A different feature or page came on screen. */
 static void navigate_event_cb(lv_event_t *e)
 {
+    lv_obj_t *row = lv_tileview_get_tile_active(features_view);
+    for (uint8_t i = 0; i < feature_count; i++)
+    {
+        if (features[i].row == row)
+        {
+            lv_obj_t *page = lv_tileview_get_tile_active(features[i].pages);
+            nav_dots_show(i, feature_count, lv_obj_get_index(page), features[i].page_count);
+        }
+    }
+
     for (uint8_t i = 0; i < feature_count; i++)
     {
         if (features[i].def->on_navigate != NULL)

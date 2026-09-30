@@ -57,7 +57,7 @@ static void add_brightness_page(ui_feature_t *feature)
     lv_obj_t *page = ui_feature_add_page(feature, false);
 
     lv_obj_t *brightness_slider = lv_slider_create(page);
-    lv_obj_set_size(brightness_slider, ui_px(200), ui_px(20));
+    lv_obj_set_size(brightness_slider, ui_px(180), ui_px(20));   // leaves room for the navigation dots
     lv_slider_set_range(brightness_slider, 1, 100);
     lv_slider_set_value(brightness_slider, settings_get()->brightness, LV_ANIM_OFF);
     lv_obj_center(brightness_slider);
