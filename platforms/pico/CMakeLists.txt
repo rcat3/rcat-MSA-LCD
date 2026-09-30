@@ -60,6 +60,8 @@ target_link_libraries(board PUBLIC
     hardware_adc
     hardware_dma
     hardware_clocks
+    hardware_flash
+    pico_flash
 )
 
 add_executable(rcat-msa-lcd main.c)

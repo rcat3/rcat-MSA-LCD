@@ -28,8 +28,13 @@
 #
 ******************************************************************************/
 
+#include <string.h>
+
 #include "hal.h"
 #include "lvgl.h"
+
+#include "hardware/flash.h"
+#include "pico/flash.h"
 
 #include "DEV_Config.h"
 #include "LCD_1in28.h"
@@ -37,6 +42,12 @@
 
 #define DRAW_BUF_LINES 10
 #define LVGL_TICK_MS   5
+
+// Settings live in the last sector of flash, well past the end of the firmware.
+// Flashing a new .uf2 doesn't touch it, so settings survive firmware updates.
+#define SETTINGS_FLASH_OFFSET (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE)
+
+extern char __flash_binary_end;
 
 // LVGL
 static lv_disp_draw_buf_t disp_buf;
@@ -126,6 +137,52 @@ bool hal_battery_voltage(float *volts)
     const float conversion_factor = 3.3f / (1 << 12) * 3;
     *volts = adc_read() * conversion_factor;
     return true;
+}
+
+bool hal_settings_read(void *data, size_t len)
+{
+    if (len > FLASH_PAGE_SIZE)
+    {
+        return false;
+    }
+    memcpy(data, (const void *)(XIP_BASE + SETTINGS_FLASH_OFFSET), len);
+    return true;
+}
+
+typedef struct
+{
+    const void *data;
+    size_t len;
+} settings_write_t;
+
+// Runs with interrupts disabled, since the flash can't be read (and so no
+// code can run from it) while it's being erased or programmed.
+static void settings_write_cb(void *param)
+{
+    const settings_write_t *w = param;
+    static uint8_t page[FLASH_PAGE_SIZE];
+
+    memset(page, 0xFF, sizeof(page));
+    memcpy(page, w->data, w->len);
+    flash_range_erase(SETTINGS_FLASH_OFFSET, FLASH_SECTOR_SIZE);
+    flash_range_program(SETTINGS_FLASH_OFFSET, page, FLASH_PAGE_SIZE);
+}
+
+bool hal_settings_write(const void *data, size_t len)
+{
+    if (len > FLASH_PAGE_SIZE)
+    {
+        return false;
+    }
+
+    // Never erase part of the firmware if it ever grows into the last sector.
+    if ((uintptr_t)&__flash_binary_end - XIP_BASE > SETTINGS_FLASH_OFFSET)
+    {
+        return false;
+    }
+
+    settings_write_t w = { data, len };
+    return flash_safe_execute(settings_write_cb, &w, 100) == PICO_OK;
 }
 
 void hal_delay_ms(uint32_t ms)

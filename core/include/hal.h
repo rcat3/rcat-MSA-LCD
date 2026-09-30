@@ -10,6 +10,7 @@
 #define RCAT_HAL_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /* Bring up clocks, buses, the LCD panel and the touch controller.
@@ -30,6 +31,12 @@ void hal_backlight_set(uint8_t percent);
 /* Read the battery voltage in volts.
  * Returns false if the board can't measure it. */
 bool hal_battery_voltage(float *volts);
+
+/* Persistent storage for one small block of settings (up to 256 bytes).
+ * The caller validates the contents, so the board just stores raw bytes.
+ * hal_settings_read returns false if the board has no storage. */
+bool hal_settings_read(void *data, size_t len);
+bool hal_settings_write(const void *data, size_t len);
 
 void hal_delay_ms(uint32_t ms);
 

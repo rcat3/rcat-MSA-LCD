@@ -30,6 +30,7 @@
 
 #include <stdio.h>
 
+#include "app/settings.h"
 #include "hal.h"
 #include "lvgl.h"
 #include "media/image_list.h"
@@ -40,9 +41,6 @@
 static lv_obj_t *tileview;
 static lv_obj_t *battery_label;
 static lv_obj_t *brightness_value_label;
-
-static uint8_t brightness = UI_INITIAL_BRIGHTNESS;
-static uint8_t rotation = 0;   // clockwise quarter turns
 
 static void build_tiles(void);
 static void add_pic_tile(lv_obj_t *tv, const media_image_t *pic, uint8_t num);
@@ -134,12 +132,12 @@ static void add_brightness_tile(lv_obj_t *tv, uint8_t num)
     lv_obj_t *brightness_slider = lv_slider_create(brightness_tile);
     lv_obj_set_size(brightness_slider, 200, 20);
     lv_slider_set_range(brightness_slider, 1, 100);
-    lv_slider_set_value(brightness_slider, brightness, LV_ANIM_OFF);
+    lv_slider_set_value(brightness_slider, settings_get()->brightness, LV_ANIM_OFF);
     lv_obj_center(brightness_slider);
     lv_obj_add_event_cb(brightness_slider, brightness_slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     brightness_value_label = lv_label_create(brightness_tile);
-    lv_label_set_text_fmt(brightness_value_label, "%d%%", brightness);
+    lv_label_set_text_fmt(brightness_value_label, "%d%%", settings_get()->brightness);
     lv_obj_align_to(brightness_value_label, brightness_slider, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
     lv_obj_t *brightness_label = lv_label_create(brightness_tile);
@@ -162,7 +160,7 @@ static void add_rotation_tile(lv_obj_t *tv, uint8_t num)
     lv_roller_set_options(rotation_roller,
                           "0°\n90°\n180°\n270°", LV_ROLLER_MODE_NORMAL);
     lv_roller_set_visible_row_count(rotation_roller, 3);
-    lv_roller_set_selected(rotation_roller, rotation, LV_ANIM_OFF);
+    lv_roller_set_selected(rotation_roller, settings_get()->rotation, LV_ANIM_OFF);
     lv_obj_center(rotation_roller);
     lv_obj_add_event_cb(rotation_roller, rotation_roller_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
@@ -174,11 +172,12 @@ static void add_rotation_tile(lv_obj_t *tv, uint8_t num)
 static void brightness_slider_event_cb(lv_event_t *e)
 {
     lv_obj_t *brightness_slider = lv_event_get_target(e);
-    brightness = lv_slider_get_value(brightness_slider);
+    uint8_t brightness = lv_slider_get_value(brightness_slider);
 
     lv_label_set_text_fmt(brightness_value_label, "%d%%", brightness);
     lv_obj_align_to(brightness_value_label, brightness_slider, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
     hal_backlight_set(brightness);
+    settings_set_brightness(brightness);
 }
 
 static void rotation_roller_event_cb(lv_event_t *e)
@@ -186,8 +185,9 @@ static void rotation_roller_event_cb(lv_event_t *e)
     lv_obj_t *rotation_roller = lv_event_get_target(e);
 
     // Roller options are 0, 90, 180 and 270 degrees.
-    rotation = lv_roller_get_selected(rotation_roller);
+    uint8_t rotation = lv_roller_get_selected(rotation_roller);
     hal_display_set_rotation(rotation);
+    settings_set_rotation(rotation);
 }
 
 static void battery_timer_cb(lv_timer_t *t)
