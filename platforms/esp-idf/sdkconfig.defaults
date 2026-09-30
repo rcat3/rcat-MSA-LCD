@@ -1,0 +1,10 @@
+# Settings shared by all ESP-IDF boards. Board specific ones are in
+# boards/<board>/sdkconfig.defaults.
+
+# 1 ms ticks, so the main loop's short delays actually yield
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# Use config/lv_conf.h instead of LVGL's menuconfig options
+# CONFIG_LV_CONF_SKIP is not set

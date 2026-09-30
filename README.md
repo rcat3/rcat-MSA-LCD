@@ -4,6 +4,8 @@
 
 This project now supports both the [Waveshare RP2040-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0C4LRRVVN) as well as the [Waveshare RP2350-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0DLBF5QKK).  The RP2040 version has 264kB of SRAM while the RP2350 version has 520kB.  They're about the same price, so I'd recommend just getting the RP2350 version.  This is especially true if you're interested in displaying animated GIFs.  GIFs are very memory intensive, and the RP2350 has a lot more room for them.
 
+Support for the [Waveshare ESP32-S3-Touch-LCD-1.46](https://docs.waveshare.com/ESP32-S3-Touch-LCD-1.46) is being added.  It has a larger 412x412 round display, 8MB of PSRAM, a microphone, a speaker, a TF card slot, WiFi and Bluetooth, which opens the door to things like sound-reactive effects.  It isn't in the MSA mask build yet, and the images still display at their 240x240 size in the middle of its bigger screen.
+
 ### 3D Print Models
 
 The 3D model files can be found at [this link](https://www.printables.com/model/538771-rp2040-lcd-128-msa).  I don't think I used the pieces as the original author intended.  Therefore, not all of the pieces were used.  I recommend printing the pieces in `light v23.stl` and `vpu_threaded.3mf`.  I ended up drilling a 1/4" hole through the threaded piece so that I could mount a switch to conveniently disconnect battery power.
@@ -27,7 +29,7 @@ My implementation originally focused on displaying static images, but it now sup
 
 If you want to change the images, you'll need to rebuild the software image and reflash the device.
 
-### Building the software: Installing pico-sdk
+### Building for the RP2040/RP2350 boards: Installing pico-sdk
 
 First, you're going to need to clone the [pico-sdk](https://github.com/raspberrypi/pico-sdk) project from GitHub.  Make a new folder somewhere and `cd` into that folder.  Then `git clone https://github.com/raspberrypi/pico-sdk.git`.  Note this folder location.  You'll need it in the next step.
 
@@ -41,7 +43,7 @@ git clone --recursive https://github.com/rcat3/rcat-MSA-LCD.git
 
 If you already cloned without it, run `git submodule update --init` inside the repo.
 
-### Building the rcat-MSA-LCD project
+### Building the RP2040/RP2350 firmware
 
 ```
 cd rcat-MSA-LCD   (wherever you cloned this repo)
@@ -69,11 +71,40 @@ When compilation is complete, you should have a file called `build/rcat-msa-lcd.
 
 If you switch between boards, delete the `build` folder first (or use a different build folder for each board).
 
-### Flashing the image
+### Flashing the RP2040/RP2350 boards
 
 Connect the USB-C port of the RP2040 to your computer.  To flash a new image onto the hardware, press and hold the `BOOT` button.  Press and release `RESET`.  Now you can release `BOOT`.  The screen should be off.  A mass storage device should appear on the computer.  Copy the .uf2 file to this mass storage device.  When copying is complete, the RP2040 should reset and begin running the new image.
 
 
+
+### Building for the ESP32-S3 board: Installing ESP-IDF
+
+The ESP32 boards are built with Espressif's [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/v5.5.5/esp32s3/get-started/linux-macos-setup.html), version 5.5.  On Linux, the short version is:
+
+```
+mkdir -p ~/esp && cd ~/esp
+git clone -b v5.5.5 --recursive https://github.com/espressif/esp-idf.git esp-idf-v5.5.5
+cd esp-idf-v5.5.5
+./install.sh esp32s3
+```
+
+Then in each new terminal where you want to build, run `. ~/esp/esp-idf-v5.5.5/export.sh` to set up the environment.
+
+### Building and flashing the ESP32-S3 board
+
+From the top of the repo:
+
+```
+idf.py -C platforms/esp-idf -B build-s3-146 -DBOARD=waveshare_esp32s3_touch_lcd_1_46 build
+```
+
+The first build downloads the display and touch drivers from Espressif's component registry.  To flash, connect the board's USB-C port and run:
+
+```
+idf.py -C platforms/esp-idf -B build-s3-146 -p /dev/ttyACM0 flash monitor
+```
+
+Use the port your board shows up as.  `monitor` shows the log output; press `Ctrl+]` to exit it.  Holding the power button for 2 seconds turns the board off when it's running on battery.
 
 ## Modifying the code to add or change images
 
@@ -118,6 +149,7 @@ To remove an image, just take it out of the list.  Images in `core/media/images`
 - `core/` - The application itself (UI, image list, settings).  This code doesn't depend on any particular board.
 - `core/include/hal.h` - The small set of functions each board has to provide (display, touch, backlight, battery).
 - `platforms/pico/` - Build files for the Raspberry Pi RP2040/RP2350 boards.  `boards/*.cmake` lists the supported boards, and `boards/touch_lcd_1_28/` has the Waveshare drivers for the 1.28" round display.
+- `platforms/esp-idf/` - Build files for the ESP32 boards.  `boards/` has one folder per board with its drivers, pin assignments and settings.
 - `third_party/lvgl/` - The [LVGL](https://lvgl.io) graphics library (git submodule).
 - `tools/img2c.py` - Converts images and GIFs into C files for `core/media/images`.
 - `imgs/` - Source images.  The files in `core/media/images` are generated from these.

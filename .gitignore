@@ -15,3 +15,6 @@ Makefile
 
 # Python
 __pycache__/
+
+# ESP-IDF downloaded components
+managed_components/
