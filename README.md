@@ -32,23 +32,26 @@ Other things you'll need:
 
 ## Using the Display
 
-Swipe up and down to move between images.  On boards with a microphone (currently the ESP32-S3 board), the images are followed by a **KITT** tile: three columns of red bars that light up with your voice, like KITT's voice box in Knight Rider.  Next there's a blank (black) tile, followed by the settings tiles:
+The display is organized into features.  **Swipe up and down** to move between features, and **swipe left and right** to move between the pages of a feature.  Each feature remembers which page you were on.
 
-- **Voice Ring** (boards with a microphone) - Turns on a ring around the edge of the screen that glows with your voice, and picks its color.  The ring shows on the image tiles and the blank tile.
-- **Brightness** - Drag the slider to set the backlight brightness.  This tile also shows the battery voltage.
-- **Rotation** - Rotates the whole display in 90 degree steps.  This helps if the display ends up sitting at an angle in the mask's threads.  The new rotation is applied about a second after you stop scrolling the roller, so you can scroll past options without the screen turning under your finger.
-- **Startup Image** - Picks the image that's shown when the display turns on.  *KITT* starts on the KITT tile and *Blank* starts on the black tile.
+| Feature | Pages (left to right) |
+|---|---|
+| **Images** | Each image (images from the SD card first), then a blank (black) page. |
+| **Voice** (boards with a microphone) | **KITT**: three columns of red bars that light up with your voice, like KITT's voice box in Knight Rider.  **Voice Ring**: turns on a ring around the edge of the screen that glows with your voice while the Images feature is showing, and picks its color. |
+| **Settings** | **Brightness**: the backlight brightness, plus the battery voltage.  **Rotation**: rotates the whole display in 90 degree steps, which helps if the display ends up sitting at an angle in the mask's threads.  The new rotation is applied about a second after you stop scrolling the roller.  **Startup**: picks what's shown when the display turns on (any image, KITT or the blank page). |
 
-The KITT bars and the voice ring adjust to the surroundings on their own.  A quiet room stays dark, normal talking uses most of the range, and they scale back for loud talking or a noisy room (it takes a few seconds to adjust).
+On pages with a slider or roller, start your swipe beside it rather than on it, or you'll move the control instead of the page.
 
 Settings are saved about two seconds after you change them and are restored when the display is powered back on.  They also survive flashing new firmware.
+
+The KITT bars and the voice ring adjust to the surroundings on their own.  A quiet room stays dark, normal talking uses most of the range, and they scale back for loud talking or a noisy room (it takes a few seconds to adjust).
 
 ### ESP32-S3-Touch-LCD-1.46 Notes
 
 - **Power:** The board runs from USB-C or from a 3.7V LiPo battery on its 2-pin MX1.25 connector (check the polarity before plugging a battery in).  On battery, press the `PWR` button on the side to turn it on.  The firmware keeps the power switched on after you let go.  Hold `PWR` for 2 seconds to turn it off.
 - **Images** are converted for the 412x412 screen automatically when you build, so the same image files work on every board (see [Adding or Changing Images](#adding-or-changing-images)).
 - **Rotation:** The display controller can't rotate the picture by 90 degrees itself, so the ESP32 rotates it while drawing.  It's fast enough that you shouldn't notice.
-- **Microphone:** used for the KITT tile and the voice ring.
+- **Microphone:** used by the Voice feature (KITT and the voice ring).
 - **SD card:** images on the card are shown along with the built-in ones.  See [Images on the SD Card](#images-on-the-sd-card-esp32-s3-board).
 - **Not used yet:** the speaker, IMU, clock chip, WiFi and Bluetooth.
 - There isn't a 3D printed case for this board in the mask build yet.
@@ -177,7 +180,7 @@ A few things that can come up:
 
 3. Rebuild and flash.  The build converts the images automatically.
 
-The image name is also what shows up in the *Startup Image* setting.  To remove an image, just take it out of the list.  Images in `imgs/` that aren't in the list don't take up any space in the firmware.
+The image name is also what shows up in the *Startup* setting.  To remove an image, just take it out of the list.  Images in `imgs/` that aren't in the list don't take up any space in the firmware.
 
 ### Images on the SD Card (ESP32-S3 board)
 
@@ -187,7 +190,7 @@ The ESP32-S3 board can also show images from its TF (micro SD) card, so you can 
 2. Copy PNG, JPG, BMP or animated GIF files into it.
 3. Put the card in the board and switch it on.  It shows *Loading images...* while it reads the card.
 
-The images from the card come first, sorted by file name, followed by the built-in images.  They can be picked in the *Startup Image* setting by their file name (without the extension).  If a card image has the same name as a built-in image, the card image is the one picked.  The card is only read when the board starts, so restart it after changing the card.
+The images from the card come first, sorted by file name, followed by the built-in images.  They can be picked in the *Startup* setting by their file name (without the extension).  If a card image has the same name as a built-in image, the card image is the one picked.  The card is only read when the board starts, so restart it after changing the card.
 
 Images are sized for the screen the same way as the built-in images (see below).  Static images are resized once, when they're loaded.  Animated GIFs are scaled while they play, which costs a little time on every frame and looks slightly softer.  For the best results, prepare images on your computer first with `tools/prepare_sd.py`.  It resizes GIFs and static images ahead of time and marks them as prepared, so the board shows them as they are:
 
@@ -201,7 +204,7 @@ Limits:
 - Up to 32 images are loaded from the card.
 - Images can be up to 1024x1024 pixels.
 - BMP files must be 16, 24 or 32-bit (not 1, 4 or 8-bit).  Files that can't be read are skipped, and the reason is printed in the monitor log.
-- File names can be long, but only the first 23 characters (without the extension) are used for the *Startup Image* setting.
+- File names can be long, but only the first 23 characters (without the extension) are used for the *Startup* setting.
 - Hidden files (like the `._` files macOS leaves on cards) are ignored.
 
 ### Image sizes
