@@ -39,6 +39,10 @@
 
 #define BATTERY_UPDATE_MS 1000
 
+// Apply a new rotation only once the roller has been left alone this long, so
+// flicking past options doesn't rotate the screen under your finger.
+#define ROTATION_APPLY_DELAY_MS 1000
+
 // The layout was designed for a 240x240 screen and is scaled up for bigger ones.
 #define DESIGN_SIZE 240
 
@@ -47,6 +51,8 @@ static lv_obj_t *battery_label;
 static lv_obj_t *brightness_value_label;
 static uint8_t tile_count;
 static int32_t screen_size;
+static lv_timer_t *rotation_timer;
+static uint8_t pending_rotation;
 
 /* Scale a size or offset from the 240x240 design to this screen. */
 static int32_t px(int32_t design_px)
@@ -65,6 +71,7 @@ static uint8_t startup_tile_index(void);
 static void brightness_slider_event_cb(lv_event_t *e);
 static void rotation_roller_event_cb(lv_event_t *e);
 static void startup_roller_event_cb(lv_event_t *e);
+static void rotation_apply_timer_cb(lv_timer_t *t);
 static void battery_timer_cb(lv_timer_t *t);
 
 /********************************************************************************
@@ -302,9 +309,25 @@ static void rotation_roller_event_cb(lv_event_t *e)
     lv_obj_t *rotation_roller = lv_event_get_target_obj(e);
 
     // Roller options are 0, 90, 180 and 270 degrees.
-    uint8_t rotation = lv_roller_get_selected(rotation_roller);
-    rcat_hal_display_set_rotation(rotation);
-    settings_set_rotation(rotation);
+    pending_rotation = lv_roller_get_selected(rotation_roller);
+
+    if (rotation_timer == NULL)
+    {
+        rotation_timer = lv_timer_create(rotation_apply_timer_cb, ROTATION_APPLY_DELAY_MS, NULL);
+    }
+    lv_timer_reset(rotation_timer);
+    lv_timer_resume(rotation_timer);
+}
+
+static void rotation_apply_timer_cb(lv_timer_t *t)
+{
+    lv_timer_pause(t);
+
+    if (pending_rotation != settings_get()->rotation)
+    {
+        rcat_hal_display_set_rotation(pending_rotation);
+        settings_set_rotation(pending_rotation);
+    }
 }
 
 static void startup_roller_event_cb(lv_event_t *e)
