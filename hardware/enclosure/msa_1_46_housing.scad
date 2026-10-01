@@ -35,8 +35,8 @@ display_tab = [[-7.02, -23.12], [6.20, -21.0]];     // the display's flex tab st
 display_tab_z = [-3.80, -2.07];
 sd_y = [-9.00, 7.10];               // micro SD socket, card goes in from the left edge (-x)
 sd_z = [-6.80, -4.35];
-sd_shift = [1.0, 1.0];              // the real card sits this much further towards +y and the front
-                                    // than the 3D model shows (from the first print)
+sd_shift = [1.0, 1.5];              // the real card sits this much further towards +y and the front
+                                    // than the 3D model shows (from test prints)
 button_angles = [34.7, -34.7];      // side buttons (PWR and BOOT) on the right edge
 button_z = [-9.20, -7.00];
 button_reach_r = 21.0;              // how far out the button actuators reach
@@ -49,6 +49,7 @@ rim_above_glass = 0.3;              // the rim stands this far proud of the glas
 plate_t = 2.0;                      // back plate the board screws to
 screw_d = 2.2;                      // M2 clearance, snug so the screws center the board
 screw_head_d = 4.0;                 // M2 countersunk head
+header_grow = [0.5, 1.5];           // around the pin header, more at the ends to fit a cable's plug
 usb_opening = [12.4, 6.6];          // width, height of the slot for the USB-C plug. The port sits
                                     // 1.6 mm behind the outside of the wall, so the plug's
                                     // overmold has to fit into the slot to plug in all the way
@@ -127,7 +128,8 @@ module plate_holes()
                 cylinder(d1 = screw_head_d, d2 = screw_d, h = (screw_head_d - screw_d) / 2, $fn = 32);
         }
     // Pin header, battery plug and wires, microphone, speaker
-    slab(header_box, plate_back - 1, plate_front + 1, grow = 0.5);
+    translate([-header_grow[0], -header_grow[1], 0])
+        slab([header_box[0], header_box[1] + 2 * header_grow], plate_back - 1, plate_front + 1);
     slab(battery_conn_box, plate_back - 1, plate_front + 1, grow = 1.5);
     translate([mic_xy[0], mic_xy[1], plate_back - 1]) cylinder(d = 2.0, h = plate_t + 2, $fn = 24);
     c = box_center(speaker_box);
