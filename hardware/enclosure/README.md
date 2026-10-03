@@ -2,14 +2,16 @@
 
 A 3D printable housing that screws the [Waveshare ESP32-S3-Touch-LCD-1.46](https://docs.waveshare.com/ESP32-S3-Touch-LCD-1.46) into the voice port of an MSA Millennium mask.  It's for the version of the board **with the cover glass** (44.77 mm round lens).
 
-**Status: draft.**  The first full print fit well: the board sits snugly and the thread screws in cleanly.  This version tightens up the USB-C opening, moves the micro SD slot, and makes the button tabs easier to press.
+**Status: draft.**  The board, thread, micro SD slot and buttons have all been checked with full prints.
 
 ## How it goes together
 
-- The board sits in a cup on the outside of the mask, with the glass flush with the front.  Its USB-C port (bottom), micro SD slot (left) and PWR/BOOT side buttons (right) stay reachable from the outside.  The buttons are pressed through flexible tabs in the wall, hinged at the front edge.
+- The board sits in a cup on the outside of the mask, with the glass flush with the front.  Its micro SD slot (left) and PWR/BOOT side buttons (right) stay reachable from the outside.  The buttons are pressed through flexible tabs in the wall, hinged at the front edge.
+- The USB-C port is covered by the wall.  The board charges its battery at up to 2 A, far more than a small LiPo is rated for, so this stops it being plugged in by accident.  Take the board out to use USB, and unplug the battery first.  To print the housing with an opening for the port, set `usb_access = true`.
 - The board screws to the cup's back plate with three M2 countersunk screws (about M2x5) into the standoffs on the back of the board.  The screws go in from the back, through the inside of the threaded part.
-- The back plate carries the MSA voice port thread.  The space inside the thread (42 mm across) holds the battery and power switch, like the 1.28" design.  The battery plug passes through an opening behind the board's battery connector.
-- There are holes in the back plate behind the microphone and speaker.
+- The back plate carries the MSA voice port thread.  The space inside the thread (42 mm across, 8 mm deep) holds the battery, a 702030 LiPo (7 x 20 x 30 mm).  The PWR button turns the board on and off (hold it for 2 seconds to turn off), so there's no separate switch.
+- The board's battery connector sits between the board and the back plate, so it can't be reached once the board is screwed in.  Plug a short extension cable into it first, and connect the battery to that.  The extension's wires come out over the speaker, through the opening in the back plate.
+- There's a hole in the back plate behind the microphone.
 
 ## Files
 

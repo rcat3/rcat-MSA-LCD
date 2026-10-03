@@ -23,10 +23,12 @@ lens_d = 44.77;                     // cover glass
 standoffs = [[12.00, -14.95], [-11.54, -15.45], [0.00, 17.75]];   // M2 threaded standoffs on the back
 standoff_back_z = -10.91;           // the back of the standoffs, where the board rests on the back plate
 header_box = [[-17.02, -6.10], [-11.52, 6.33]];     // 2x10 pin header, pins reach z = -12.95
-battery_conn_box = [[3.67, 12.00], [11.32, 17.20]];
+battery_conn_box = [[3.67, 12.00], [11.32, 17.20]];   // the plug goes in from -y, towards the center
 mic_xy = [-14.20, -12.05];
 speaker_box = [[3.85, -5.00], [18.50, 5.00]];
-usb_z = [-10.64, -7.48];            // USB-C port, centered on x = 0 at the bottom edge, front at y = -23.0
+usb_z = [-10.64, -7.48];            // USB-C port, centered on x = 0 at the bottom edge
+usb_port_w = 8.94;
+usb_port_front = 23.0;
 // The bottom of the board is flattened and sticks out past the round glass.
 // Its outline (half of it, mirrored) from z = -10.64 to the glass at -2.1:
 bottom_outline = [[0, -21.90], [7, -21.90], [8, -21.68], [9, -21.28], [10, -20.61], [11, -19.61]];
@@ -50,6 +52,8 @@ plate_t = 2.0;                      // back plate the board screws to
 screw_d = 2.2;                      // M2 clearance, snug so the screws center the board
 screw_head_d = 4.0;                 // M2 countersunk head
 header_grow = [0.5, 1.5];           // around the pin header, more at the ends to fit a cable's plug
+usb_access = false;                 // the wall covers the USB-C port, so a battery can't be charged
+                                    // at the board's 2 A by accident. Take the board out to use USB
 usb_opening = [12.4, 6.6];          // width, height of the slot for the USB-C plug. The port sits
                                     // 1.6 mm behind the outside of the wall, so the plug's
                                     // overmold has to fit into the slot to plug in all the way
@@ -127,14 +131,26 @@ module plate_holes()
             translate([0, 0, plate_back - 0.01])
                 cylinder(d1 = screw_head_d, d2 = screw_d, h = (screw_head_d - screw_d) / 2, $fn = 32);
         }
-    // Pin header, battery plug and wires, microphone, speaker
+    // Pin header, microphone
     translate([-header_grow[0], -header_grow[1], 0])
         slab([header_box[0], header_box[1] + 2 * header_grow], plate_back - 1, plate_front + 1);
-    slab(battery_conn_box, plate_back - 1, plate_front + 1, grow = 1.5);
     translate([mic_xy[0], mic_xy[1], plate_back - 1]) cylinder(d = 2.0, h = plate_t + 2, $fn = 24);
-    c = box_center(speaker_box);
-    for (dx = [-5 : 2.5 : 5], dy = [-2.5 : 2.5 : 2.5])
-        translate([c[0] + dx, c[1] + dy, plate_back - 1]) cylinder(d = 1.6, h = plate_t + 2, $fn = 16);
+    // One opening over the speaker and the battery connector. The battery
+    // plug goes in towards the center of the board, in the narrow gap
+    // between the board and the plate, so its wires come out over the
+    // speaker and turn back into the cavity there.
+    b = battery_conn_box;
+    translate([0, 0, plate_back - 1])
+        linear_extrude(plate_t + 2)
+            offset(r = 1) offset(delta = -1)
+                union()
+                {
+                    translate([b[0][0] - 1.5, b[0][1] - 1.5]) square(box_size(b) + [3, 3]);
+                    translate([b[0][0] - 0.5, speaker_box[0][1] - 0.5])
+                        square([box_size(b)[0] + 1, b[0][1] - speaker_box[0][1] + 1]);
+                    translate([speaker_box[0][0] - 0.5, speaker_box[0][1] - 0.5])
+                        square(box_size(speaker_box) + [1, 1]);
+                }
 }
 
 // Openings in the side wall
@@ -151,12 +167,16 @@ module wall_openings()
     translate([0, 0, display_tab_z[0] - bottom_margin])
         slab(display_tab, 0, pocket_top - display_tab_z[0] + bottom_margin, grow = bottom_margin);
     // USB-C at the bottom: a rounded slot around the port
-    translate([0, -cup_or + wall / 2, (usb_z[0] + usb_z[1]) / 2])
+    if (usb_access) translate([0, -cup_or + wall / 2, (usb_z[0] + usb_z[1]) / 2])
         rotate([90, 0, 0])
             hull()
                 for (s = [-1, 1])
                     translate([s * (usb_opening[0] - usb_opening[1]) / 2, 0, 0])
                         cylinder(d = usb_opening[1], h = wall + 4, center = true, $fn = 48);
+    // or, when it's closed off, a pocket for the front of the port, which
+    // reaches into the wall
+    else translate([-usb_port_w / 2 - bottom_margin, -usb_port_front - bottom_margin, usb_z[0] - bottom_margin])
+        cube([usb_port_w + 2 * bottom_margin, 3, usb_z[1] - usb_z[0] + 2 * bottom_margin]);
     // Micro SD slot on the left
     translate([-cup_or - 1, (sd_y[0] + sd_y[1]) / 2 + sd_shift[0] - sd_opening[0] / 2,
                (sd_z[0] + sd_z[1]) / 2 + sd_shift[1] - sd_opening[1] / 2])
