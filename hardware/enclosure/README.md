@@ -39,6 +39,10 @@ Print these first.  They're small and quick, and they save printing the whole ho
 
 The start of the thread is beveled (`thread_lead_in`) so it catches more easily when you screw it in.
 
+## Travel case
+
+There's a hinged case to carry the housing in, in [`../travel-case`](../travel-case/).
+
 ## Credits and License
 
 This design is based on [RP2040-LCD-1.28-MSA](https://www.printables.com/model/538771-rp2040-lcd-128-msa) by whyrlpool, whose voice port thread was in turn adapted from the [Gas Mask VPU Cover (MSA compatible)](https://cults3d.com/en/3d-model/various/gas-mask-vpu-cover-msa-compatible).
