@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #define SETTINGS_DEFAULT_BRIGHTNESS 50
+#define SETTINGS_DEFAULT_VOLUME     50
 #define SETTINGS_NAME_LEN           24
 
 /* Startup image names that select the blank (black) tile and the KITT tile. */
@@ -19,6 +20,10 @@ typedef struct
     char startup_image[SETTINGS_NAME_LEN];  // image name; empty means the first image
     uint8_t voice_ring;                     // 1 to show the voice ring around the edge
     uint8_t voice_ring_color;               // index into the voice ring color list
+    uint8_t sound_volume;                   // percent
+    uint8_t sound_repeat;                   // audio_repeat_t
+    uint8_t sound_autoplay;                 // 1 to start playing at startup
+    char sound_track[SETTINGS_NAME_LEN];    // file name of the last track played
 } settings_t;
 
 /* Load the saved settings, or the defaults if nothing valid has been saved. */
@@ -33,5 +38,9 @@ void settings_set_brightness(uint8_t percent);
 void settings_set_rotation(uint8_t quarter_turns);
 void settings_set_startup_image(const char *name);
 void settings_set_voice_ring(uint8_t enabled, uint8_t color);
+void settings_set_sound_volume(uint8_t percent);
+void settings_set_sound_repeat(uint8_t repeat);
+void settings_set_sound_autoplay(uint8_t enabled);
+void settings_set_sound_track(const char *name);
 
 #endif

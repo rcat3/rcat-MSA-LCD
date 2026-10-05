@@ -1,18 +1,19 @@
 #include "app.h"
 #include "app/settings.h"
 #include "audio/audio_level.h"
+#include "audio/audio_player.h"
 #include "hal.h"
 #include "media/media_library.h"
 #include "lvgl.h"
 #include "ui/ui.h"
 
-/* Built-in images, plus any on the SD card (shown first). */
-static void load_images(void)
+/* Built-in images, plus any on the SD card (shown first). storage_path is
+ * NULL without a card. */
+static void load_images(const char *storage_path)
 {
     media_init();
 
-    const char *storage_path;
-    if (!rcat_hal_storage_mount(&storage_path))
+    if (storage_path == NULL)
     {
         return;
     }
@@ -46,8 +47,14 @@ void app_run(void)
     lv_init();
     rcat_hal_lvgl_register();
     rcat_hal_display_set_rotation(settings_get()->rotation);
-    load_images();
-    audio_level_start();    // does nothing on boards without a microphone
+    const char *storage_path;
+    if (!rcat_hal_storage_mount(&storage_path))
+    {
+        storage_path = NULL;
+    }
+    load_images(storage_path);
+    audio_level_start();                // does nothing on boards without a microphone
+    audio_player_init(storage_path);    // or a speaker
     ui_init();
 
     while (1)

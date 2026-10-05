@@ -185,6 +185,12 @@ bool rcat_hal_audio_in_start(uint32_t sample_rate, rcat_hal_audio_block_cb_t cb,
     return false;
 }
 
+bool rcat_hal_audio_out_start(rcat_hal_audio_fill_cb_t cb, void *user_data)
+{
+    // No speaker on this board.
+    return false;
+}
+
 bool rcat_hal_storage_mount(const char **path)
 {
     // No card slot on this board.

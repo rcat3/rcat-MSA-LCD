@@ -51,6 +51,21 @@ typedef void (*rcat_hal_audio_block_cb_t)(const int16_t *samples, size_t count, 
  * Returns false if the board has no microphone. */
 bool rcat_hal_audio_in_start(uint32_t sample_rate, rcat_hal_audio_block_cb_t cb, void *user_data);
 
+/* Called by the board's speaker task whenever it needs more sound. Fill
+ * frames with up to max_frames frames of interleaved stereo (left, right),
+ * signed 16-bit, and return how many were written. *sample_rate holds the
+ * rate of the last block; set it if this block is at a different rate. Return
+ * 0 when there's nothing to play, and the board quietens the speaker. Like
+ * the microphone callback, it runs on a board task, not the UI loop, so it
+ * must not call LVGL. It can take a few milliseconds, to read and decode
+ * files, as the board buffers around a tenth of a second. */
+typedef size_t (*rcat_hal_audio_fill_cb_t)(int16_t *frames, size_t max_frames, uint32_t *sample_rate,
+                                           void *user_data);
+
+/* Start the speaker, calling cb for sound to play. Returns false if the board
+ * has no speaker. */
+bool rcat_hal_audio_out_start(rcat_hal_audio_fill_cb_t cb, void *user_data);
+
 /* Mount removable storage (the SD card). On success, *path is set to where
  * it's mounted, e.g. "/sdcard", for use with fopen() and friends. Returns
  * false if the board has no card slot or no readable card. */

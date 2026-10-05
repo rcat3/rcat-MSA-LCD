@@ -88,6 +88,25 @@ static const char *TAG = "board";
 #define AUDIO_TASK_PRIORITY 5
 #define AUDIO_TASK_CORE     1       // LVGL runs on core 0
 
+// Speaker, through a PCM5101 DAC and an NS8002 amplifier, with the volume
+// trimmer between them. Only the left channel reaches the amplifier. The DAC
+// makes its own master clock from the bit clock. This matches Waveshare's
+// demo: I2S port 0, 16-bit stereo.
+#define PIN_SPK_BCLK        48
+#define PIN_SPK_WS          38
+#define PIN_SPK_DOUT        47
+#define SPK_BLOCK_FRAMES    256
+#define SPK_DMA_DESC_NUM    8       // 8 x 512 frames: about 90 ms at 44.1 kHz
+#define SPK_DMA_FRAME_NUM   512
+#define SPK_DEFAULT_RATE    44100
+#define SPK_IDLE_MS         500     // silence before the I2S clocks stop, to save power
+#define SPK_IDLE_POLL_MS    20
+// The fill callback decodes MP3s, and the decoder keeps around 12 KB on the
+// stack. The stack must be in internal RAM, as the task reads the SD card.
+#define SPK_TASK_STACK      (24 * 1024)
+#define SPK_TASK_PRIORITY   6       // above the microphone, so the sound doesn't stutter
+#define SPK_TASK_CORE       1
+
 // SD card, in 1-bit SD mode. Its D3 line is EXIO_SD_CS, which is held high.
 #define PIN_SD_CLK          14
 #define PIN_SD_CMD          17
@@ -126,6 +145,10 @@ static i2s_chan_handle_t mic_channel;
 static rcat_hal_audio_block_cb_t audio_cb;
 static void *audio_cb_user_data;
 static size_t audio_block_samples;
+
+static i2s_chan_handle_t spk_channel;
+static rcat_hal_audio_fill_cb_t spk_cb;
+static void *spk_cb_user_data;
 
 static lv_display_t *display;
 static uint8_t *draw_buf1;
@@ -288,7 +311,7 @@ bool rcat_hal_audio_in_start(uint32_t sample_rate, rcat_hal_audio_block_cb_t cb,
     audio_cb_user_data = user_data;
     audio_block_samples = sample_rate * AUDIO_BLOCK_MS / 1000;
 
-    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_1, I2S_ROLE_MASTER);
     chan_config.dma_frame_num = audio_block_samples;
     if (i2s_new_channel(&chan_config, NULL, &mic_channel) != ESP_OK)
     {
@@ -313,6 +336,133 @@ bool rcat_hal_audio_in_start(uint32_t sample_rate, rcat_hal_audio_block_cb_t cb,
     ESP_ERROR_CHECK(i2s_channel_enable(mic_channel));
 
     xTaskCreatePinnedToCore(audio_task, "audio", AUDIO_TASK_STACK, NULL, AUDIO_TASK_PRIORITY, NULL, AUDIO_TASK_CORE);
+    return true;
+}
+
+/********************************************************************************
+function:	Ask for sound and play it. Between sounds the speaker plays silence for
+            a moment, then the I2S channel stops until there's more to play.
+parameter:
+********************************************************************************/
+static void speaker_task(void *arg)
+{
+    int16_t *frames = heap_caps_calloc(SPK_BLOCK_FRAMES * 2, sizeof(int16_t), MALLOC_CAP_INTERNAL);
+    assert(frames);
+
+    uint32_t rate = SPK_DEFAULT_RATE;
+    bool running = false;
+    uint32_t idle_frames = 0;
+
+    while (1)
+    {
+        uint32_t block_rate = rate;
+        size_t count = spk_cb(frames, SPK_BLOCK_FRAMES, &block_rate, spk_cb_user_data);
+
+        if (count == 0)
+        {
+            if (!running)
+            {
+                rcat_hal_delay_ms(SPK_IDLE_POLL_MS);
+                continue;
+            }
+            // Play silence for a moment, so sounds close together don't stop
+            // and start the clocks, then stop.
+            memset(frames, 0, SPK_BLOCK_FRAMES * 2 * sizeof(int16_t));
+            count = SPK_BLOCK_FRAMES;
+            idle_frames += count;
+            if (idle_frames >= rate / 1000 * SPK_IDLE_MS)
+            {
+                i2s_channel_disable(spk_channel);
+                running = false;
+                ESP_LOGI(TAG, "Speaker off");
+                continue;
+            }
+        }
+        else
+        {
+            idle_frames = 0;
+            // Only the left channel reaches the speaker, so mix both into it.
+            for (size_t i = 0; i < count; i++)
+            {
+                int16_t mono = (int16_t)(((int32_t)frames[2 * i] + frames[2 * i + 1]) / 2);
+                frames[2 * i] = frames[2 * i + 1] = mono;
+            }
+        }
+
+        if (block_rate != rate && block_rate > 0)
+        {
+            if (running)
+            {
+                i2s_channel_disable(spk_channel);
+                running = false;
+            }
+            i2s_std_clk_config_t clk_config = I2S_STD_CLK_DEFAULT_CONFIG(block_rate);
+            if (i2s_channel_reconfig_std_clock(spk_channel, &clk_config) == ESP_OK)
+            {
+                rate = block_rate;
+            }
+            else
+            {
+                ESP_LOGW(TAG, "The speaker can't play at %lu Hz", (unsigned long)block_rate);
+            }
+        }
+        if (!running)
+        {
+            esp_err_t err = i2s_channel_enable(spk_channel);
+            ESP_LOGI(TAG, "Speaker on at %lu Hz (%s)", (unsigned long)rate, esp_err_to_name(err));
+            running = true;
+        }
+
+        size_t written = 0;
+        esp_err_t err = i2s_channel_write(spk_channel, frames, count * 2 * sizeof(int16_t), &written, portMAX_DELAY);
+        if (err != ESP_OK)
+        {
+            ESP_LOGW(TAG, "Speaker write failed (%s)", esp_err_to_name(err));
+        }
+    }
+}
+
+bool rcat_hal_audio_out_start(rcat_hal_audio_fill_cb_t cb, void *user_data)
+{
+    if (spk_channel != NULL)
+    {
+        return false;   // already running
+    }
+
+    spk_cb = cb;
+    spk_cb_user_data = user_data;
+
+    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+    chan_config.dma_desc_num = SPK_DMA_DESC_NUM;
+    chan_config.dma_frame_num = SPK_DMA_FRAME_NUM;
+    chan_config.auto_clear = true;      // play silence, not old sound, if the task falls behind
+    if (i2s_new_channel(&chan_config, &spk_channel, NULL) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "No I2S channel for the speaker");
+        spk_channel = NULL;
+        return false;
+    }
+
+    i2s_std_config_t std_config = {
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SPK_DEFAULT_RATE),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
+        .gpio_cfg = {
+            .mclk = I2S_GPIO_UNUSED,
+            .bclk = PIN_SPK_BCLK,
+            .ws = PIN_SPK_WS,
+            .dout = PIN_SPK_DOUT,
+            .din = I2S_GPIO_UNUSED,
+        },
+    };
+    ESP_ERROR_CHECK(i2s_channel_init_std_mode(spk_channel, &std_config));
+
+    if (xTaskCreatePinnedToCore(speaker_task, "speaker", SPK_TASK_STACK, NULL, SPK_TASK_PRIORITY, NULL,
+                                SPK_TASK_CORE) != pdPASS)
+    {
+        ESP_LOGE(TAG, "Not enough memory for the speaker task");
+        return false;
+    }
+    ESP_LOGI(TAG, "Speaker ready");
     return true;
 }
 

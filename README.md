@@ -38,6 +38,7 @@ The display is organized into features.  **Swipe up and down** to move between f
 |---|---|
 | **Images** | Each image (images from the SD card first), then a blank (black) page. |
 | **Voice** (boards with a microphone) | **KITT**: three columns of red bars that light up with your voice, like KITT's voice box in Knight Rider.  **Voice Ring**: turns on a ring around the edge of the screen that glows with your voice while the Images feature is showing, and picks its color. |
+| **Sound** (boards with a speaker) | **Player**: plays the sound files on the SD card, with previous, play/pause and next buttons.  Sound keeps playing in the background while you look at images or anything else.  **Options**: the volume, what happens at the end of a track (*Repeat all*, *Repeat one* or *Play once*), and *Play at startup*, which starts playing the last track as soon as the display turns on. |
 | **Settings** | **Brightness**: the backlight brightness, plus the battery voltage.  **Rotation**: rotates the whole display in 90 degree steps, which helps if the display ends up sitting at an angle in the mask's threads.  The new rotation is applied about a second after you stop scrolling the roller.  **Startup**: picks what's shown when the display turns on (any image, KITT or the blank page). |
 
 On pages with a slider or roller, start your swipe beside it rather than on it, or you'll move the control instead of the page.
@@ -53,8 +54,9 @@ The KITT bars and the voice ring adjust to the surroundings on their own.  A qui
 - **Rotation:** The display controller can't rotate the picture by 90 degrees itself, so the ESP32 rotates it while drawing.  It's fast enough that you shouldn't notice.
 - **Microphone:** used by the Voice feature (KITT and the voice ring).
 - **SD card:** images on the card are shown along with the built-in ones.  See [Images on the SD Card](#images-on-the-sd-card-esp32-s3-board).
-- **Not used yet:** the speaker, IMU, clock chip, WiFi and Bluetooth.
-- There isn't a 3D printed case for this board in the mask build yet.
+- **Speaker:** plays sound files from the SD card (see [Sounds on the SD Card](#sounds-on-the-sd-card-esp32-s3-board)).  The small round trimmer on the back of the board sets the speaker's volume, on top of the volume setting.
+- **Not used yet:** the IMU, clock chip, WiFi and Bluetooth.
+- **Housing:** there's a 3D printable housing for this board, and a travel case for it, in [`hardware/`](hardware/enclosure/).
 
 ## Software
 
@@ -64,7 +66,7 @@ If you want to change the images, you'll need to rebuild the firmware and reflas
 
 ### Getting the code
 
-LVGL is included as a git submodule, so clone with `--recursive`:
+LVGL and the sound file decoders are included as git submodules, so clone with `--recursive`:
 
 ```
 git clone --recursive https://github.com/rcat3/rcat-MSA-LCD.git
@@ -207,6 +209,20 @@ Limits:
 - File names can be long, but only the first 23 characters (without the extension) are used for the *Startup* setting.
 - Hidden files (like the `._` files macOS leaves on cards) are ignored.
 
+### Sounds on the SD Card (ESP32-S3 board)
+
+1. Make a folder called `sounds` on the card.
+2. Copy WAV, MP3 or FLAC files into it.
+3. Put the card in the board and switch it on.
+
+The sounds are played in order of file name.  They're read from the card as they play, so they can be any length.  A sound that repeats (*Repeat one*) starts again straight after its end, so short sound effects loop without a gap.  MP3s loop without a gap if the encoder recorded the silence it adds to each end (LAME and ffmpeg do); otherwise there's a short pause at the loop.
+
+Limits:
+- Up to 100 sounds are found on the card.
+- Any sample rate works.  Mono and stereo files both play, and files with more channels play their first two.
+- Files that can't be played are skipped, and the reason is printed in the monitor log.
+- The card is only read when the board starts, so restart it after changing the card.
+
 ### Image sizes
 
 Images are drawn for a 240x240 screen.  On a bigger screen they're scaled up by the same amount, so a 240x240 image fills the 412x412 screen of the ESP32-S3 board, and a 120x120 image fills the middle half of either screen.  If an image is bigger than 240x240, it's treated as full screen artwork and scaled to fit each screen, so higher resolution artwork will look sharper on the bigger screen.
@@ -229,10 +245,11 @@ The ESP32-S3 board decodes GIFs into its 8MB of PSRAM, so even full screen GIFs 
 ## Project layout
 
 - `core/` - The application itself (UI, image list, settings).  This code doesn't depend on any particular board.
-- `core/include/hal.h` - The small set of functions each board has to provide (display, touch, backlight, battery, settings storage).
+- `core/include/hal.h` - The small set of functions each board has to provide (display, touch, backlight, battery, settings storage, microphone, speaker, SD card).
 - `platforms/pico/` - Build files for the Raspberry Pi RP2040/RP2350 boards.  `boards/*.cmake` lists the supported boards, and `boards/touch_lcd_1_28/` has the Waveshare drivers for the 1.28" round display.
 - `platforms/esp-idf/` - Build files for the ESP32 boards.  `boards/` has one folder per board with its drivers, pin assignments and settings.
 - `third_party/lvgl/` - The [LVGL](https://lvgl.io) graphics library (git submodule).
+- `third_party/dr_libs/` - The [dr_libs](https://github.com/mackron/dr_libs) WAV, MP3 and FLAC decoders (git submodule).
 - `tools/img2c.py` - Converts images and GIFs into C files.  The build runs it for every image in `imgs/`.
 - `tools/prepare_sd.py` - Resizes and re-encodes images for an SD card.
 - `tools/gen_lv_conf.py` - Generates the platforms' `lv_conf.h` files (LVGL settings) from the LVGL template.  Run it after updating the LVGL submodule.

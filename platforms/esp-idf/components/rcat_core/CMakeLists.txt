@@ -25,9 +25,9 @@ idf_build_get_property(board_component RCAT_BOARD_COMPONENT)
 
 idf_component_register(SRCS ${CORE_SOURCES} ${IMAGE_SOURCES}
                        INCLUDE_DIRS ${CORE_DIR}/include
-                       PRIV_INCLUDE_DIRS ${CORE_DIR}
+                       PRIV_INCLUDE_DIRS ${CORE_DIR} ${CORE_DIR}/../third_party/dr_libs
                        REQUIRES lvgl
                        PRIV_REQUIRES ${board_component})
 
-# Images can be loaded from the SD card
+# Images and sounds can be loaded from the SD card
 target_compile_definitions(${COMPONENT_LIB} PRIVATE RCAT_HAVE_FILESYSTEM=1)

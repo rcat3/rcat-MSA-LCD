@@ -32,6 +32,10 @@ static void set_defaults(settings_t *s)
     s->startup_image[0] = '\0';
     s->voice_ring = 0;
     s->voice_ring_color = 0;
+    s->sound_volume = SETTINGS_DEFAULT_VOLUME;
+    s->sound_repeat = 0;
+    s->sound_autoplay = 0;
+    s->sound_track[0] = '\0';
 }
 
 static uint32_t checksum(const void *data, size_t len)
@@ -73,6 +77,13 @@ static bool load(settings_t *out)
     out->startup_image[SETTINGS_NAME_LEN - 1] = '\0';
     out->voice_ring = out->voice_ring ? 1 : 0;
     // voice_ring_color is checked against the color list by the UI
+    if (out->sound_volume > 100)
+    {
+        out->sound_volume = SETTINGS_DEFAULT_VOLUME;
+    }
+    // sound_repeat is checked by the audio player
+    out->sound_autoplay = out->sound_autoplay ? 1 : 0;
+    out->sound_track[SETTINGS_NAME_LEN - 1] = '\0';
     return true;
 }
 
@@ -147,5 +158,30 @@ void settings_set_voice_ring(uint8_t enabled, uint8_t color)
 {
     current.voice_ring = enabled ? 1 : 0;
     current.voice_ring_color = color;
+    schedule_save();
+}
+
+void settings_set_sound_volume(uint8_t percent)
+{
+    current.sound_volume = percent;
+    schedule_save();
+}
+
+void settings_set_sound_repeat(uint8_t repeat)
+{
+    current.sound_repeat = repeat;
+    schedule_save();
+}
+
+void settings_set_sound_autoplay(uint8_t enabled)
+{
+    current.sound_autoplay = enabled ? 1 : 0;
+    schedule_save();
+}
+
+void settings_set_sound_track(const char *name)
+{
+    strncpy(current.sound_track, name, SETTINGS_NAME_LEN - 1);
+    current.sound_track[SETTINGS_NAME_LEN - 1] = '\0';
     schedule_save();
 }
