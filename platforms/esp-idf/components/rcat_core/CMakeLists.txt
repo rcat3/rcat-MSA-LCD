@@ -27,7 +27,9 @@ idf_component_register(SRCS ${CORE_SOURCES} ${IMAGE_SOURCES}
                        INCLUDE_DIRS ${CORE_DIR}/include
                        PRIV_INCLUDE_DIRS ${CORE_DIR} ${CORE_DIR}/../third_party/dr_libs
                        REQUIRES lvgl
-                       PRIV_REQUIRES ${board_component})
+                       PRIV_REQUIRES ${board_component} lwip)
 
 # Images and sounds can be loaded from the SD card
 target_compile_definitions(${COMPONENT_LIB} PRIVATE RCAT_HAVE_FILESYSTEM=1)
+# and the voice lab streams over WiFi with BSD sockets
+target_compile_definitions(${COMPONENT_LIB} PRIVATE RCAT_HAVE_NETWORK=1)

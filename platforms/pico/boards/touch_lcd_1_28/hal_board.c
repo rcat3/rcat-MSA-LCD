@@ -191,6 +191,21 @@ bool rcat_hal_audio_out_start(rcat_hal_audio_fill_cb_t cb, void *user_data)
     return false;
 }
 
+bool rcat_hal_wifi_connect(const char *ssid, const char *password)
+{
+    // No WiFi on this board.
+    return false;
+}
+
+void rcat_hal_wifi_disconnect(void)
+{
+}
+
+bool rcat_hal_wifi_address(char *ip, size_t len)
+{
+    return false;
+}
+
 bool rcat_hal_storage_mount(const char **path)
 {
     // No card slot on this board.

@@ -2,6 +2,7 @@
 #include "app/settings.h"
 #include "audio/audio_level.h"
 #include "audio/audio_player.h"
+#include "audio/voice_lab.h"
 #include "hal.h"
 #include "media/media_library.h"
 #include "lvgl.h"
@@ -55,6 +56,7 @@ void app_run(void)
     load_images(storage_path);
     audio_level_start();                // does nothing on boards without a microphone
     audio_player_init(storage_path);    // or a speaker
+    voice_lab_init(storage_path);
     ui_init();
 
     while (1)

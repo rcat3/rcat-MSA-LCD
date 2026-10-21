@@ -22,6 +22,7 @@
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_cali_scheme.h"
 #include "esp_adc/adc_oneshot.h"
+#include "esp_event.h"
 #include "esp_heap_caps.h"
 #include "esp_io_expander_tca9554.h"
 #include "esp_lcd_panel_io.h"
@@ -30,8 +31,10 @@
 #include "esp_lcd_spd2010.h"
 #include "esp_lcd_touch_spd2010.h"
 #include "esp_log.h"
+#include "esp_netif.h"
 #include "esp_timer.h"
 #include "esp_vfs_fat.h"
+#include "esp_wifi.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -83,8 +86,8 @@ static const char *TAG = "board";
 #define PIN_MIC_BCLK        15
 #define PIN_MIC_WS          2
 #define PIN_MIC_DIN         39
-#define AUDIO_BLOCK_MS      10
-#define AUDIO_TASK_STACK    4096
+#define AUDIO_BLOCK_MS      5       // short, to keep the voice effect's delay down
+#define AUDIO_TASK_STACK    8192    // the voice effects and the voice lab run on it too
 #define AUDIO_TASK_PRIORITY 5
 #define AUDIO_TASK_CORE     1       // LVGL runs on core 0
 
@@ -96,8 +99,11 @@ static const char *TAG = "board";
 #define PIN_SPK_WS          38
 #define PIN_SPK_DOUT        47
 #define SPK_BLOCK_FRAMES    256
-#define SPK_DMA_DESC_NUM    8       // 8 x 512 frames: about 90 ms at 44.1 kHz
-#define SPK_DMA_FRAME_NUM   512
+// Many small DMA buffers: together they hold about 45 ms of music at 44.1 kHz,
+// to ride out SD card and decoding hiccups, while live sound (the voice
+// effect) only waits behind one or two of them, 8-16 ms at 16 kHz.
+#define SPK_DMA_DESC_NUM    16
+#define SPK_DMA_FRAME_NUM   128
 #define SPK_DEFAULT_RATE    44100
 #define SPK_IDLE_MS         500     // silence before the I2S clocks stop, to save power
 #define SPK_IDLE_POLL_MS    20
@@ -149,6 +155,11 @@ static size_t audio_block_samples;
 static i2s_chan_handle_t spk_channel;
 static rcat_hal_audio_fill_cb_t spk_cb;
 static void *spk_cb_user_data;
+
+static bool wifi_ready;
+static volatile bool wifi_wanted;
+static volatile bool wifi_connected;
+static esp_ip4_addr_t wifi_ip;
 
 static lv_display_t *display;
 static uint8_t *draw_buf1;
@@ -463,6 +474,114 @@ bool rcat_hal_audio_out_start(rcat_hal_audio_fill_cb_t cb, void *user_data)
         return false;
     }
     ESP_LOGI(TAG, "Speaker ready");
+    return true;
+}
+
+static void wifi_event_cb(void *arg, esp_event_base_t base, int32_t id, void *data)
+{
+    if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START)
+    {
+        esp_wifi_connect();
+    }
+    else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED)
+    {
+        wifi_connected = false;
+        if (wifi_wanted)
+        {
+            esp_wifi_connect();
+        }
+    }
+    else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP)
+    {
+        wifi_ip = ((ip_event_got_ip_t *)data)->ip_info.ip;
+        wifi_connected = true;
+        ESP_LOGI(TAG, "WiFi connected, " IPSTR, IP2STR(&wifi_ip));
+    }
+}
+
+bool rcat_hal_wifi_connect(const char *ssid, const char *password)
+{
+    if (!wifi_ready)
+    {
+        // Each step is done once, so trying again after a failure carries on
+        // from where it stopped.
+        static bool netif_ready;
+        static esp_netif_t *sta_netif;
+
+        ESP_LOGI(TAG, "Free internal RAM before WiFi: %u bytes (largest block %u)",
+                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+                 (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
+        if (!netif_ready)
+        {
+            esp_err_t err = esp_netif_init();
+            if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
+            {
+                ESP_LOGE(TAG, "Network setup failed (%s)", esp_err_to_name(err));
+                return false;
+            }
+            err = esp_event_loop_create_default();
+            if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
+            {
+                ESP_LOGE(TAG, "Event loop failed (%s)", esp_err_to_name(err));
+                return false;
+            }
+            netif_ready = true;
+        }
+        if (sta_netif == NULL)
+        {
+            sta_netif = esp_netif_create_default_wifi_sta();
+        }
+        wifi_init_config_t init_config = WIFI_INIT_CONFIG_DEFAULT();
+        esp_err_t err = esp_wifi_init(&init_config);
+        if (err != ESP_OK)
+        {
+            ESP_LOGE(TAG, "WiFi didn't start (%s)", esp_err_to_name(err));
+            return false;
+        }
+        esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_cb, NULL);
+        esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_cb, NULL);
+        esp_wifi_set_storage(WIFI_STORAGE_RAM);     // the network comes from the SD card every time
+        esp_wifi_set_mode(WIFI_MODE_STA);
+        wifi_ready = true;
+    }
+
+    wifi_config_t config = { 0 };
+    // These fields don't need a terminating zero when they're full.
+    memcpy(config.sta.ssid, ssid, strnlen(ssid, sizeof(config.sta.ssid)));
+    memcpy(config.sta.password, password, strnlen(password, sizeof(config.sta.password)));
+    esp_wifi_set_config(WIFI_IF_STA, &config);
+
+    wifi_wanted = true;
+    esp_wifi_start();
+    // Power saving delays packets by up to a beacon interval, so leave it off
+    // while the voice lab streams.
+    esp_wifi_set_ps(WIFI_PS_NONE);
+    ESP_LOGI(TAG, "Connecting to WiFi network %s. Free internal RAM: %u bytes", ssid,
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+    return true;
+}
+
+void rcat_hal_wifi_disconnect(void)
+{
+    if (!wifi_ready)
+    {
+        return;
+    }
+    wifi_wanted = false;
+    wifi_connected = false;
+    esp_wifi_disconnect();
+    esp_wifi_stop();
+    ESP_LOGI(TAG, "WiFi off");
+}
+
+bool rcat_hal_wifi_address(char *ip, size_t len)
+{
+    if (!wifi_connected)
+    {
+        return false;
+    }
+    esp_ip4_addr_t addr = wifi_ip;
+    snprintf(ip, len, IPSTR, IP2STR(&addr));
     return true;
 }
 

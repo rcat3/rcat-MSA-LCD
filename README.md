@@ -37,7 +37,7 @@ The display is organized into features.  **Swipe up and down** to move between f
 | Feature | Pages (left to right) |
 |---|---|
 | **Images** | Each image (images from the SD card first), then a blank (black) page. |
-| **Voice** (boards with a microphone) | **KITT**: three columns of red bars that light up with your voice, like KITT's voice box in Knight Rider.  **Voice Ring**: turns on a ring around the edge of the screen that glows with your voice while the Images feature is showing, and picks its color. |
+| **Voice** (boards with a microphone) | **KITT**: three columns of red bars that light up with your voice, like KITT's voice box in Knight Rider.  **Voice Ring**: turns on a ring around the edge of the screen that glows with your voice while the Images feature is showing, and picks its color.  **Voice Effect**: changes your voice (see [Voice Effects](#voice-effects-esp32-s3-board)).  **Voice Lab** (boards with WiFi): streams the microphone to a computer, for trying out voice effects (see [Voice Lab](#voice-lab-esp32-s3-board)). |
 | **Sound** (boards with a speaker) | **Player**: plays the sound files on the SD card, with previous, play/pause and next buttons.  Sound keeps playing in the background while you look at images or anything else.  **Options**: the volume, what happens at the end of a track (*Repeat all*, *Repeat one* or *Play once*), and *Play at startup*, which starts playing the last track as soon as the display turns on. |
 | **Settings** | **Brightness**: the backlight brightness, plus the battery voltage.  **Rotation**: rotates the whole display in 90 degree steps, which helps if the display ends up sitting at an angle in the mask's threads.  The new rotation is applied about a second after you stop scrolling the roller.  **Startup**: picks what's shown when the display turns on (any image, KITT or the blank page). |
 
@@ -55,7 +55,8 @@ The KITT bars and the voice ring adjust to the surroundings on their own.  A qui
 - **Microphone:** used by the Voice feature (KITT and the voice ring).
 - **SD card:** images on the card are shown along with the built-in ones.  See [Images on the SD Card](#images-on-the-sd-card-esp32-s3-board).
 - **Speaker:** plays sound files from the SD card (see [Sounds on the SD Card](#sounds-on-the-sd-card-esp32-s3-board)).  The small round trimmer on the back of the board sets the speaker's volume, on top of the volume setting.
-- **Not used yet:** the IMU, clock chip, WiFi and Bluetooth.
+- **WiFi:** used by the Voice Lab, only while it's switched on.
+- **Not used yet:** the IMU, clock chip and Bluetooth.
 - **Housing:** there's a 3D printable housing for this board, and a travel case for it, in [`hardware/`](hardware/enclosure/).
 
 ## Software
@@ -223,6 +224,47 @@ Limits:
 - Files that can't be played are skipped, and the reason is printed in the monitor log.
 - The card is only read when the board starts, so restart it after changing the card.
 
+### Voice Effects (ESP32-S3 board)
+
+The *Voice Effect* page (Voice feature) runs your voice through an effect on the board itself:
+
+| Preset | Sound |
+|---|---|
+| Female | Your own intonation, raised in pitch, with the vowels raised less, for a natural female voice |
+| Fembot | Female, with the pitch snapped to musical notes and a light chorus |
+| Synthetic | Snapped pitch, a faint metallic ring and slight digital grit |
+| Android | A monotone female robot |
+| AI | Thinner, higher and snapped, with a quick shimmer |
+| Robot | A monotone robot at a low pitch |
+| Deep | Your voice, lower |
+| Dalek | Ring modulated |
+| Drone | Lower, ring modulated and slightly crushed |
+
+The effect goes to the Voice Lab stream (`voice_monitor.py --listen effect` plays it) and, with *Play on speaker* switched on, to the board's speaker.  While it's on the speaker, the sound player waits.  *Play on speaker* is always off at startup: with the speaker facing into the mask, it feeds back.  An external speaker facing away from the mask works much better (the board's amplifier can drive one through the speaker pads; neither speaker wire is ground).
+
+The presets are the same as the effects in `tools/voice_monitor.py`, so they can be tried and tuned on a computer first.  The pitch-following presets add about 15-20 ms of delay, the others less.
+
+### Voice Lab (ESP32-S3 board)
+
+The Voice Lab streams the board's microphone over WiFi to `tools/voice_monitor.py` on a computer, which plays it, records it and runs it through voice effects.  It's for trying out effects with the real microphone in the mask before building them into the firmware.
+
+1. Put a file called `wifi.txt` on the SD card with your WiFi network's name and password (2.4 GHz networks only):
+   ```
+   ssid=My Network
+   password=my password
+   ```
+2. Install the monitor's packages on the computer: `pip install numpy sounddevice` (on Linux, sounddevice also needs PortAudio: `sudo apt install libportaudio2`).
+3. On the board, go to the last page of the Voice feature and switch the Voice Lab on.  It shows the board's address once it's connected.
+4. On the computer, run `python3 tools/voice_monitor.py`.  It finds the board on the network, and the board shows *Streaming to* the computer's address.  If it isn't found, give the board's address: `python3 tools/voice_monitor.py --board 192.168.1.23`.
+
+Some things to try:
+- `--effect robot` (or `deep`, `dalek`, `drone`, `android`) plays the microphone through an effect.  Effects can be chained, like `--effect gate:-45,pitch:0.8,ring:40`.  Run with `--help` for the list.
+- `--record take1.wav` saves the microphone as it is.  Then `--input take1.wav --effect robot` tries effects on the recording, without the board.
+- `--listen effect` plays the board's own voice effect instead of the microphone.
+- `--meter` prints the microphone level every second.  Play something on the speaker (Sound feature) to measure how much the microphone picks up.
+
+WiFi adds a delay of around a tenth of a second, which is fine for judging an effect but odd if you listen to yourself live.  It's easier to have someone else listen, or to record and play back.  The Voice Lab is off whenever the board starts, and WiFi is off while it's off.
+
 ### Image sizes
 
 Images are drawn for a 240x240 screen.  On a bigger screen they're scaled up by the same amount, so a 240x240 image fills the 412x412 screen of the ESP32-S3 board, and a 120x120 image fills the middle half of either screen.  If an image is bigger than 240x240, it's treated as full screen artwork and scaled to fit each screen, so higher resolution artwork will look sharper on the bigger screen.
@@ -252,6 +294,7 @@ The ESP32-S3 board decodes GIFs into its 8MB of PSRAM, so even full screen GIFs 
 - `third_party/dr_libs/` - The [dr_libs](https://github.com/mackron/dr_libs) WAV, MP3 and FLAC decoders (git submodule).
 - `tools/img2c.py` - Converts images and GIFs into C files.  The build runs it for every image in `imgs/`.
 - `tools/prepare_sd.py` - Resizes and re-encodes images for an SD card.
+- `tools/voice_monitor.py` - Plays and records the microphone stream from the Voice Lab, with voice effects.
 - `tools/gen_lv_conf.py` - Generates the platforms' `lv_conf.h` files (LVGL settings) from the LVGL template.  Run it after updating the LVGL submodule.
 - `imgs/` - The images.
 

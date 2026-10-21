@@ -66,6 +66,16 @@ typedef size_t (*rcat_hal_audio_fill_cb_t)(int16_t *frames, size_t max_frames, u
  * has no speaker. */
 bool rcat_hal_audio_out_start(rcat_hal_audio_fill_cb_t cb, void *user_data);
 
+/* Join a WiFi network, and keep rejoining it if the connection drops, until
+ * rcat_hal_wifi_disconnect(). Once connected, the core talks to the network
+ * with ordinary BSD sockets. Returns false if the board has no WiFi. */
+bool rcat_hal_wifi_connect(const char *ssid, const char *password);
+void rcat_hal_wifi_disconnect(void);
+
+/* The board's IP address as text ("192.168.1.23"). Returns false while it
+ * isn't connected. */
+bool rcat_hal_wifi_address(char *ip, size_t len);
+
 /* Mount removable storage (the SD card). On success, *path is set to where
  * it's mounted, e.g. "/sdcard", for use with fopen() and friends. Returns
  * false if the board has no card slot or no readable card. */

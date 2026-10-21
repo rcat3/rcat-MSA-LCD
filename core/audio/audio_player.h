@@ -45,4 +45,8 @@ size_t audio_player_current(void);
 void audio_player_set_volume(uint8_t percent);
 void audio_player_set_repeat(audio_repeat_t repeat);
 
+/* For the speaker: decode up to max_frames frames of stereo (see
+ * rcat_hal_audio_fill_cb_t). Called on the speaker's task. */
+size_t audio_player_fill(int16_t *frames, size_t max_frames, uint32_t *sample_rate);
+
 #endif

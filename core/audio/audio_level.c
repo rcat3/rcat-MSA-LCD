@@ -26,9 +26,9 @@
 #include <stdio.h>
 
 #include "audio/audio_level.h"
-#include "hal.h"
+#include "audio/mic.h"
 
-#define SAMPLE_RATE                 16000
+#define SAMPLE_RATE                 MIC_SAMPLE_RATE
 
 // Background tracking: the quietest 100 ms slot in the last 3 seconds. Each
 // slot is an average, because individual blocks in a quiet room swing by
@@ -176,9 +176,9 @@ static void block_cb(const int16_t *samples, size_t count, void *user_data)
 
 bool audio_level_start(void)
 {
-    if (!running)
+    if (!running && mic_start())
     {
-        running = rcat_hal_audio_in_start(SAMPLE_RATE, block_cb, NULL);
+        running = mic_add_listener(block_cb, NULL);
     }
     return running;
 }

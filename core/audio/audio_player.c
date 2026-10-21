@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include "audio/audio_player.h"
-#include "hal.h"
+#include "audio/speaker.h"
 
 #if RCAT_HAVE_FILESYSTEM
 
@@ -272,8 +272,12 @@ static int32_t volume_gain(void)
     return v * v * 65536 / (100 * 100);
 }
 
-static size_t fill_cb(int16_t *frames, size_t max_frames, uint32_t *sample_rate, void *user_data)
+size_t audio_player_fill(int16_t *frames, size_t max_frames, uint32_t *sample_rate)
 {
+    if (decoder == NULL)
+    {
+        return 0;
+    }
     handle_commands();
 
     size_t done = 0;
@@ -404,7 +408,7 @@ bool audio_player_init(const char *storage_path)
         return false;
     }
 
-    available = rcat_hal_audio_out_start(fill_cb, NULL);
+    available = speaker_start();
     return available;
 }
 
@@ -488,6 +492,11 @@ size_t audio_player_track_count(void)
 const char *audio_player_track_name(size_t index)
 {
     return "";
+}
+
+size_t audio_player_fill(int16_t *frames, size_t max_frames, uint32_t *sample_rate)
+{
+    return 0;
 }
 
 void audio_player_play(size_t index) {}

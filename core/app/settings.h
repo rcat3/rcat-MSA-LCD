@@ -24,6 +24,7 @@ typedef struct
     uint8_t sound_repeat;                   // audio_repeat_t
     uint8_t sound_autoplay;                 // 1 to start playing at startup
     char sound_track[SETTINGS_NAME_LEN];    // file name of the last track played
+    uint8_t voice_effect;                   // voice effect preset, 0 for off
 } settings_t;
 
 /* Load the saved settings, or the defaults if nothing valid has been saved. */
@@ -42,5 +43,6 @@ void settings_set_sound_volume(uint8_t percent);
 void settings_set_sound_repeat(uint8_t repeat);
 void settings_set_sound_autoplay(uint8_t enabled);
 void settings_set_sound_track(const char *name);
+void settings_set_voice_effect(uint8_t preset);
 
 #endif

@@ -36,6 +36,7 @@ static void set_defaults(settings_t *s)
     s->sound_repeat = 0;
     s->sound_autoplay = 0;
     s->sound_track[0] = '\0';
+    s->voice_effect = 0;
 }
 
 static uint32_t checksum(const void *data, size_t len)
@@ -84,6 +85,7 @@ static bool load(settings_t *out)
     // sound_repeat is checked by the audio player
     out->sound_autoplay = out->sound_autoplay ? 1 : 0;
     out->sound_track[SETTINGS_NAME_LEN - 1] = '\0';
+    // voice_effect is checked against the preset list by the UI
     return true;
 }
 
@@ -176,6 +178,12 @@ void settings_set_sound_repeat(uint8_t repeat)
 void settings_set_sound_autoplay(uint8_t enabled)
 {
     current.sound_autoplay = enabled ? 1 : 0;
+    schedule_save();
+}
+
+void settings_set_voice_effect(uint8_t preset)
+{
+    current.voice_effect = preset;
     schedule_save();
 }
 
