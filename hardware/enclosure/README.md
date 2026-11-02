@@ -100,7 +100,7 @@ Everything but the battery connects through the ribbon on the board's 2x10 heade
 - BAT is connected straight to the battery, so the 10k resistor keeps the amplifiers switched off while the board is off.
 - Put a 100-220 uF capacitor across Vin and GND at each amplifier.
 - Don't plug into the board's own USB-C port and the housing's at the same time.
-- The firmware doesn't drive the amplifiers on these pins yet.  It still sends sound to the board's own speaker.
+- The firmware sends the sound to the amplifiers when `RCAT_SPEAKER` is `EXTERNAL` in `platforms/esp-idf/features.cmake`, which is the default.  It switches them on with SD only while sound is playing.
 
 ## Travel case
 

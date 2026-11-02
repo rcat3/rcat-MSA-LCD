@@ -106,13 +106,25 @@ static const char *TAG = "board";
 #define AUDIO_TASK_PRIORITY 5
 #define AUDIO_TASK_CORE     1       // LVGL runs on core 0
 
-// Speaker, through a PCM5101 DAC and an NS8002 amplifier, with the volume
-// trimmer between them. Only the left channel reaches the amplifier. The DAC
-// makes its own master clock from the bit clock. This matches Waveshare's
-// demo: I2S port 0, 16-bit stereo.
+// Speaker. RCAT_SPEAKER_EXTERNAL (from platforms/esp-idf/features.cmake)
+// picks where the sound goes. Either way it's I2S port 0, 16-bit stereo, and
+// only the left channel is played.
+#if RCAT_SPEAKER_EXTERNAL
+// External amplifiers (MAX98357A) on the 2x10 expansion header. SD switches
+// them on while sound is playing, and a 10k resistor from SD to GND keeps
+// them off while the board is off or starting up.
+#define PIN_SPK_BCLK        12
+#define PIN_SPK_WS          13
+#define PIN_SPK_DOUT        3
+#define PIN_SPK_SD          1
+#else
+// The board's own speaker, through a PCM5101 DAC and an NS8002 amplifier,
+// with the volume trimmer between them. The DAC makes its own master clock
+// from the bit clock. This matches Waveshare's demo.
 #define PIN_SPK_BCLK        48
 #define PIN_SPK_WS          38
 #define PIN_SPK_DOUT        47
+#endif
 #define SPK_BLOCK_FRAMES    256
 // Many small DMA buffers: together they hold about 45 ms of music at 44.1 kHz,
 // to ride out SD card and decoding hiccups, while live sound (the voice
@@ -486,6 +498,9 @@ static void speaker_task(void *arg)
             if (idle_frames >= rate / 1000 * SPK_IDLE_MS)
             {
                 i2s_channel_disable(spk_channel);
+#ifdef PIN_SPK_SD
+                gpio_set_level(PIN_SPK_SD, 0);
+#endif
                 running = false;
                 ESP_LOGI(TAG, "Speaker off");
                 continue;
@@ -523,6 +538,9 @@ static void speaker_task(void *arg)
         {
             esp_err_t err = i2s_channel_enable(spk_channel);
             ESP_LOGI(TAG, "Speaker on at %lu Hz (%s)", (unsigned long)rate, esp_err_to_name(err));
+#ifdef PIN_SPK_SD
+            gpio_set_level(PIN_SPK_SD, 1);
+#endif
             running = true;
         }
 
@@ -568,6 +586,16 @@ bool rcat_hal_audio_out_start(rcat_hal_audio_fill_cb_t cb, void *user_data)
         },
     };
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(spk_channel, &std_config));
+
+#ifdef PIN_SPK_SD
+    // The amplifiers stay off until there's sound to play.
+    const gpio_config_t sd_config = {
+        .pin_bit_mask = 1ULL << PIN_SPK_SD,
+        .mode = GPIO_MODE_OUTPUT,
+    };
+    gpio_config(&sd_config);
+    gpio_set_level(PIN_SPK_SD, 0);
+#endif
 
     if (xTaskCreatePinnedToCore(speaker_task, "speaker", SPK_TASK_STACK, NULL, SPK_TASK_PRIORITY, NULL,
                                 SPK_TASK_CORE) != pdPASS)

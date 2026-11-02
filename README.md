@@ -178,6 +178,8 @@ Set a feature to `OFF` to leave it out, or `ON` to build it in, then build as us
 
 A feature that needs hardware the board doesn't have (a microphone, a speaker, an accelerometer) hides itself even when it's built in.  The level is off for the RP2040/RP2350 boards, because their accelerometer isn't supported yet.
 
+The ESP32 file also sets `RCAT_SPEAKER`, where the sound goes: `BUILT_IN` for the board's own speaker, or `EXTERNAL` for amplifiers wired to its expansion header, as in the [speaker housing](hardware/enclosure/README.md#speaker-housing).
+
 ## Adding or Changing Images
 
 1. Put the image in the `imgs/` folder.  PNG, BMP, JPG and animated GIF files all work.
