@@ -3,6 +3,11 @@ set(CORE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../core)
 
 file(GLOB_RECURSE CORE_SOURCES ${CORE_DIR}/*.c)
 
+# Optional features, chosen in platforms/esp-idf/features.cmake
+include(${CMAKE_CURRENT_LIST_DIR}/../../features.cmake)
+include(${CORE_DIR}/features.cmake)
+rcat_feature_filter_sources(CORE_SOURCES)
+
 # Images from imgs/, converted for the board's screen size. This can't run
 # while ESP-IDF is only scanning components for their requirements.
 set(IMAGE_SOURCES "")
@@ -28,6 +33,11 @@ idf_component_register(SRCS ${CORE_SOURCES} ${IMAGE_SOURCES}
                        PRIV_INCLUDE_DIRS ${CORE_DIR} ${CORE_DIR}/../third_party/dr_libs
                        REQUIRES lvgl
                        PRIV_REQUIRES ${board_component} lwip)
+
+if(NOT CMAKE_BUILD_EARLY_EXPANSION)
+    rcat_feature_definitions(feature_definitions)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE ${feature_definitions})
+endif()
 
 # Images and sounds can be loaded from the SD card
 target_compile_definitions(${COMPONENT_LIB} PRIVATE RCAT_HAVE_FILESYSTEM=1)

@@ -167,6 +167,17 @@ A few things that can come up:
 - **Watching the log without flashing:** `idf.py -C platforms/esp-idf -B build-s3-146 -p /dev/ttyACM0 monitor`
 - **After updating the code, a setting doesn't seem to take effect.**  ESP-IDF keeps its configuration in the build folder and doesn't apply new defaults to an existing one.  Delete the `build-s3-146` folder and build again.
 
+## Choosing Features
+
+The display's sections (images, voice, sound, level) can each be left out of the build.  Each platform has a file listing them:
+
+- `platforms/pico/features.cmake` for the RP2040/RP2350 boards
+- `platforms/esp-idf/features.cmake` for the ESP32 boards
+
+Set a feature to `OFF` to leave it out, or `ON` to build it in, then build as usual.  The build picks up the change by itself and prints the features it's building, for example `-- Features: IMAGES, VOICE, SOUND`.  Settings is always built in.
+
+A feature that needs hardware the board doesn't have (a microphone, a speaker, an accelerometer) hides itself even when it's built in.  The level is off for the RP2040/RP2350 boards, because their accelerometer isn't supported yet.
+
 ## Adding or Changing Images
 
 1. Put the image in the `imgs/` folder.  PNG, BMP, JPG and animated GIF files all work.
@@ -288,6 +299,7 @@ The ESP32-S3 board decodes GIFs into its 8MB of PSRAM, so even full screen GIFs 
 
 - `core/` - The application itself (UI, image list, settings).  This code doesn't depend on any particular board.
 - `core/include/hal.h` - The small set of functions each board has to provide (display, touch, backlight, battery, settings storage, microphone, speaker, SD card).
+- `core/features.cmake` - The list of optional features.  Each platform's `features.cmake` picks which ones to build.
 - `platforms/pico/` - Build files for the Raspberry Pi RP2040/RP2350 boards.  `boards/*.cmake` lists the supported boards, and `boards/touch_lcd_1_28/` has the Waveshare drivers for the 1.28" round display.
 - `platforms/esp-idf/` - Build files for the ESP32 boards.  `boards/` has one folder per board with its drivers, pin assignments and settings.
 - `third_party/lvgl/` - The [LVGL](https://lvgl.io) graphics library (git submodule).

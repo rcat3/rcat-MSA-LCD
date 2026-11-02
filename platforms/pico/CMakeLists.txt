@@ -42,7 +42,8 @@ target_include_directories(lvgl PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/config
 )
 
-# Portable application code
+# Portable application code, with the features chosen in features.cmake
+include(${CMAKE_CURRENT_LIST_DIR}/features.cmake)
 add_subdirectory(${REPO_ROOT}/core ${CMAKE_BINARY_DIR}/core)
 
 # Board support: HAL implementation and the Waveshare drivers

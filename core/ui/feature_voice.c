@@ -39,7 +39,11 @@ parameter:
 ********************************************************************************/
 static void on_navigate(void)
 {
+#if RCAT_FEATURE_IMAGES
     bool on_page = feature_images_on_screen() || ui_current_page() == ring_page;
+#else
+    bool on_page = ui_current_page() == ring_page;
+#endif
 
     voice_ring_set_color(settings_get()->voice_ring_color);
     voice_ring_set_visible(settings_get()->voice_ring && on_page);

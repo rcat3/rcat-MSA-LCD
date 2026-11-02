@@ -37,6 +37,8 @@
 #include "ui/ui_internal.h"
 
 // The features, top to bottom. Each one is defined in its own feature_*.c.
+// All but settings are optional, and each platform picks which to build in
+// its features.cmake.
 extern const ui_feature_def_t feature_images;
 extern const ui_feature_def_t feature_voice;
 extern const ui_feature_def_t feature_sound;
@@ -44,10 +46,18 @@ extern const ui_feature_def_t feature_level;
 extern const ui_feature_def_t feature_settings;
 
 static const ui_feature_def_t *const feature_defs[] = {
+#if RCAT_FEATURE_IMAGES
     &feature_images,
+#endif
+#if RCAT_FEATURE_VOICE
     &feature_voice,
+#endif
+#if RCAT_FEATURE_SOUND
     &feature_sound,
+#endif
+#if RCAT_FEATURE_LEVEL
     &feature_level,
+#endif
     &feature_settings,   // last, so it can list every feature's startup choices
 };
 #define FEATURE_COUNT       (sizeof(feature_defs) / sizeof(feature_defs[0]))
