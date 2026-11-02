@@ -313,3 +313,36 @@ The ESP32-S3 board decodes GIFs into its 8MB of PSRAM, so even full screen GIFs 
 - `imgs/` - The images.
 
 Adding another display means adding a board folder with its HAL (`hal_board.c`) and its screen size, without copying the application code around.
+
+## Adding a Feature
+
+A feature is one of the sections you swipe up and down between, like Images or Level.  Each one lives in its own `core/ui/feature_<name>.c`, and [`core/ui/feature_level.c`](core/ui/feature_level.c) is a small, complete example to start from.
+
+1. Create `core/ui/feature_<name>.c` with a `ui_feature_def_t` called `feature_<name>` (see [`core/ui/ui_internal.h`](core/ui/ui_internal.h)):
+   - `build` adds the feature's pages with `ui_feature_add_page()`.  Return `false` to leave the feature out, for example when the board doesn't have the hardware it needs.
+   - `on_navigate` is optional and is called whenever a different page comes on screen.  Use it to start and stop anything that only needs to run while the feature is showing.
+   - Size things with `ui_px()`, which scales from the 240x240 layout to the board's screen.
+   - `ui_add_startup_choice()` lets a page be picked in the Startup setting.
+2. Add the name to `RCAT_FEATURES` in [`core/features.cmake`](core/features.cmake).
+3. Add it to the list in [`core/ui/ui.c`](core/ui/ui.c), inside `#if RCAT_FEATURE_<NAME>`, above Settings.  Settings stays last so it can list every feature's startup choices.
+4. Add a line for it to each platform's `features.cmake`, `ON` or `OFF`.
+
+### Talking to the hardware
+
+Code in `core/` never includes anything from pico-sdk or ESP-IDF.  It reaches the hardware through the functions in [`core/include/hal.h`](core/include/hal.h), which every board implements.
+
+To add one:
+
+1. Declare it in `hal.h`, with a comment saying what it does and what it returns when the board can't do it.
+2. Implement it in every board's `hal_board.c`, under `platforms/esp-idf/boards/` and `platforms/pico/boards/`.  A board without the hardware just returns `false` (or does nothing), and the feature using it hides itself.
+
+The UI runs on a single LVGL loop.  Microphone and speaker callbacks run on the board's audio tasks, so they mustn't call LVGL.
+
+### Settings and build options
+
+- **Something people change on the display** goes in `settings_t` in [`core/app/settings.h`](core/app/settings.h).  Add new fields only at the end, so settings saved by older firmware still load.  Give the field a default in `set_defaults()`, check it in `load()`, and add a setter in [`core/app/settings.c`](core/app/settings.c).
+- **Something fixed for a build**, like which speaker the ESP32 boards use, goes in the platform's `features.cmake`.  The build passes it to the code as a compile definition.
+
+### Checking a change
+
+Build every platform the change touches, using the commands in [Building for the RP2040/RP2350 boards](#building-for-the-rp2040rp2350-boards) and [Building for the ESP32-S3 board](#building-for-the-esp32-s3-board).  A change to `core/` or `hal.h` touches all of them.  Both builds should finish without warnings.  It's also worth building once with the new feature switched off.
