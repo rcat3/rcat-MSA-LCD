@@ -1,0 +1,209 @@
+// The Waveshare ESP32-S3-Touch-LCD-1.46 (the version with the cover glass)
+// and the MSA voice port thread, shared by the housings in this folder.
+//
+// Coordinates follow Waveshare's STEP model of the board: the front of the
+// glass is at z = 0, the board extends towards -z, and x/y are as seen from
+// the front with the USB-C port at the bottom (-y).
+//
+// The cup the board sits in has an inner radius of cup_ir. The openings and
+// tabs below are cut into its wall, and the back plate the board screws to
+// runs from plate_back to plate_front.
+
+thread_scale = 0.997;       // scales the thread's diameter. From the test rings: 99.7% fits best
+                            // (98% is too loose, 102% doesn't fit)
+thread_lead_in = [1.5, 1.2];  // bevel on the start of the thread (length, depth) to help it catch
+
+/* [Board: Waveshare ESP32-S3-Touch-LCD-1.46 with cover] */
+lens_d = 44.77;                     // cover glass
+standoffs = [[12.00, -14.95], [-11.54, -15.45], [0.00, 17.75]];   // M2 threaded standoffs on the back
+standoff_back_z = -10.91;           // the back of the standoffs, where the board rests on the back plate
+header_box = [[-17.02, -6.10], [-11.52, 6.33]];     // 2x10 pin header, pins reach z = -12.95
+battery_conn_box = [[3.67, 12.00], [11.32, 17.20]];   // the plug goes in from -y, towards the center
+mic_xy = [-14.20, -12.05];
+speaker_box = [[3.85, -5.00], [18.50, 5.00]];
+usb_z = [-10.64, -7.48];            // USB-C port, centered on x = 0 at the bottom edge
+usb_port_w = 8.94;
+usb_port_front = 23.0;
+// The bottom of the board is flattened and sticks out past the round glass.
+// Its outline (half of it, mirrored) from z = -10.64 to the glass at -2.1:
+bottom_outline = [[0, -21.90], [7, -21.90], [8, -21.68], [9, -21.28], [10, -20.61], [11, -19.61]];
+bottom_outline_z = [-10.64, -2.10];
+display_tab = [[-7.02, -23.12], [6.20, -21.0]];     // the display's flex tab sticks out further still
+display_tab_z = [-3.80, -2.07];
+sd_y = [-9.00, 7.10];               // micro SD socket, card goes in from the left edge (-x)
+sd_z = [-6.80, -4.35];
+sd_shift = [1.0, 1.5];              // the real card sits this much further towards +y and the front
+                                    // than the 3D model shows (from test prints)
+button_angles = [34.7, -34.7];      // side buttons (PWR and BOOT) on the right edge
+button_z = [-9.20, -7.00];
+button_reach_r = 21.0;              // how far out the button actuators reach
+
+/* [Housing] */
+bottom_margin = 0.3;                // around the flat bottom and the display tab
+clearance = 0.2;                    // around the glass (0.35 was looser than needed)
+wall = 2.0;
+rim_above_glass = 0.3;              // the rim stands this far proud of the glass to protect it
+plate_t = 2.0;                      // back plate the board screws to
+screw_d = 2.2;                      // M2 clearance, snug so the screws center the board
+screw_head_d = 4.0;                 // M2 countersunk head
+header_grow = [0.5, 1.5];           // around the pin header
+header_plug = [16.9, 3.1, 4.1];    // a ribbon cable's plug: length with the clips on its ends,
+                                    // width, and width across the notch the ribbon leaves from
+header_plug_side = 1;               // the notch faces the center of the board (1) or away from it (-1)
+header_plug_clear = 0.3;
+usb_access = false;                 // the wall covers the USB-C port, so a battery can't be charged
+                                    // at the board's 2 A by accident. Take the board out to use USB
+usb_opening = [12.4, 6.6];          // width, height of the slot for the USB-C plug. The port sits
+                                    // 1.6 mm behind the outside of the wall, so the plug's
+                                    // overmold has to fit into the slot to plug in all the way
+sd_opening = [14.0, 3.4];           // width, height of the slot for the micro SD card
+button_tab = 5.0;                   // width of the flexible tabs that press the side buttons
+tab_gap = 0.6;
+tab_t = 1.0;                        // tabs are thinner than the wall so they flex
+nub_gap = 0.1;                      // between the nubs and the buttons
+
+$fn = 128;
+
+cup_ir = lens_d / 2 + clearance;
+cup_or = cup_ir + wall;
+cup_top = rim_above_glass;
+plate_front = standoff_back_z;
+plate_back = plate_front - plate_t;
+
+function box_center(b) = [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2];
+function box_size(b) = [b[1][0] - b[0][0], b[1][1] - b[0][1]];
+
+module slab(b, z0, z1, grow = 0)
+{
+    translate([b[0][0] - grow, b[0][1] - grow, z0])
+        cube([box_size(b)[0] + 2 * grow, box_size(b)[1] + 2 * grow, z1 - z0]);
+}
+
+// The MSA thread from the 1.28" design. vendor/vpu_thread.stl has had the
+// original's inner lip removed so the inside is a plain 42 mm bore. Its front
+// face is at z = 0 and it screws into the mask from the z = 8 end, which gets
+// a bevel so the thread catches more easily.
+module vpu_thread(s)
+{
+    thread_r = 26 * s;
+    difference()
+    {
+        scale([s, s, 1]) import("vendor/vpu_thread.stl", convexity = 10);
+        translate([0, 0, 8 - thread_lead_in[0]])
+            difference()
+            {
+                cylinder(r = thread_r + 2, h = thread_lead_in[0] + 1);
+                translate([0, 0, -0.01])
+                    cylinder(r1 = thread_r + 0.01, r2 = thread_r - thread_lead_in[1], h = thread_lead_in[0] + 0.02);
+            }
+    }
+}
+
+// The thread on the back of the housing, front face against the back plate.
+// It's turned over with a rotation, not a mirror, which would reverse it.
+// It overlaps the plate slightly so the two fuse into one solid.
+module thread()
+{
+    translate([0, 0, plate_back + 0.1]) rotate([180, 0, 0]) vpu_thread(thread_scale);
+}
+
+// Holes through the back plate
+module plate_holes()
+{
+    // Screws into the board's standoffs, countersunk from the back
+    for (s = standoffs)
+        translate([s[0], s[1], 0])
+        {
+            translate([0, 0, plate_back - 1]) cylinder(d = screw_d, h = plate_t + 2, $fn = 32);
+            translate([0, 0, plate_back - 0.01])
+                cylinder(d1 = screw_head_d, d2 = screw_d, h = (screw_head_d - screw_d) / 2, $fn = 32);
+        }
+    // Pin header and the plug of a ribbon cable on it, microphone
+    translate([-header_grow[0], -header_grow[1], 0])
+        slab([header_box[0], header_box[1] + 2 * header_grow], plate_back - 1, plate_front + 1);
+    hc = (header_box[0] + header_box[1]) / 2;
+    c = header_plug_clear;
+    plug_x = header_plug_side > 0 ? hc[0] - header_plug[1] / 2 : hc[0] + header_plug[1] / 2 - header_plug[2];
+    translate([plug_x - c, hc[1] - header_plug[0] / 2 - c, plate_back - 1])
+        cube([header_plug[2] + 2 * c, header_plug[0] + 2 * c, plate_t + 2]);
+    translate([mic_xy[0], mic_xy[1], plate_back - 1]) cylinder(d = 2.0, h = plate_t + 2, $fn = 24);
+    // One opening over the speaker and the battery connector. The battery
+    // plug goes in towards the center of the board, in the narrow gap
+    // between the board and the plate, so its wires come out over the
+    // speaker and turn back into the cavity there.
+    b = battery_conn_box;
+    translate([0, 0, plate_back - 1])
+        linear_extrude(plate_t + 2)
+            offset(r = 1) offset(delta = -1)
+                union()
+                {
+                    translate([b[0][0] - 1.5, b[0][1] - 1.5]) square(box_size(b) + [3, 3]);
+                    translate([b[0][0] - 0.5, speaker_box[0][1] - 0.5])
+                        square([box_size(b)[0] + 1, b[0][1] - speaker_box[0][1] + 1]);
+                    translate([speaker_box[0][0] - 0.5, speaker_box[0][1] - 0.5])
+                        square(box_size(speaker_box) + [1, 1]);
+                }
+}
+
+// Openings in the side wall. They reach well past the outside of the cup, so
+// they also go through a thicker wall.
+module wall_openings()
+{
+    // Pocket inside the bottom of the wall for the flattened bottom of the
+    // board. It stops short of the front so the rim stays whole.
+    pocket_top = display_tab_z[1] + 0.5;
+    half = concat(bottom_outline, [[bottom_outline[len(bottom_outline) - 1][0], -15]]);
+    outline = concat(half, [for (i = [len(half) - 1 : -1 : 0]) [-half[i][0], half[i][1]]]);
+    translate([0, 0, plate_front])
+        linear_extrude(pocket_top - plate_front) offset(delta = bottom_margin) polygon(outline);
+    // The display's tab, which reaches almost to the outside of the wall
+    translate([0, 0, display_tab_z[0] - bottom_margin])
+        slab(display_tab, 0, pocket_top - display_tab_z[0] + bottom_margin, grow = bottom_margin);
+    // USB-C at the bottom: a rounded slot around the port
+    if (usb_access) translate([0, -cup_or + wall / 2, (usb_z[0] + usb_z[1]) / 2])
+        rotate([90, 0, 0])
+            hull()
+                for (s = [-1, 1])
+                    translate([s * (usb_opening[0] - usb_opening[1]) / 2, 0, 0])
+                        cylinder(d = usb_opening[1], h = wall + 4, center = true, $fn = 48);
+    // or, when it's closed off, a pocket for the front of the port, which
+    // reaches into the wall
+    else translate([-usb_port_w / 2 - bottom_margin, -usb_port_front - bottom_margin, usb_z[0] - bottom_margin])
+        cube([usb_port_w + 2 * bottom_margin, 3, usb_z[1] - usb_z[0] + 2 * bottom_margin]);
+    // Micro SD slot on the left
+    translate([-cup_or - 11, (sd_y[0] + sd_y[1]) / 2 + sd_shift[0] - sd_opening[0] / 2,
+               (sd_z[0] + sd_z[1]) / 2 + sd_shift[1] - sd_opening[1] / 2])
+        cube([wall + 13, sd_opening[0], sd_opening[1]]);
+}
+
+// A flexible tab in the wall over each side button, hinged at the front, with
+// a nub on the inside that presses the button. The free end is at the back,
+// just clear of the back plate, which makes the tab as long as it can be.
+tab_front = display_tab_z[1] + 0.5;
+tab_back = plate_front + tab_gap;
+
+module button_tab_cut(angle)
+{
+    rotate([0, 0, angle])
+    {
+        // U-shaped slot around the tab
+        difference()
+        {
+            translate([cup_ir - 1, -button_tab / 2 - tab_gap, tab_back - tab_gap])
+                cube([wall + 12, button_tab + 2 * tab_gap, tab_front - tab_back + tab_gap]);
+            translate([cup_ir - 1, -button_tab / 2, tab_back])
+                cube([wall + 12, button_tab, tab_front - tab_back + 1]);
+        }
+        // Thin the tab from the outside so it flexes
+        translate([cup_ir + tab_t, -button_tab / 2 - 0.01, tab_back - 0.01])
+            cube([wall + 10, button_tab + 0.02, tab_front - tab_back + 0.02]);
+    }
+}
+
+module button_nub(angle)
+{
+    r0 = button_reach_r + nub_gap;
+    rotate([0, 0, angle])
+        translate([r0, -1.5, button_z[0] + 0.3])
+            cube([cup_ir - r0 + 0.01, 3, button_z[1] - button_z[0] - 0.6]);
+}
