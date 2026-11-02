@@ -76,6 +76,21 @@ static const char *TAG = "board";
 #define POWER_OFF_HOLD_MS   2000
 #define POWER_KEY_POLL_MS   100
 
+// QMI8658 IMU on the I2C bus. Only its accelerometer is used.
+#define IMU_ADDR            0x6B
+#define IMU_REG_WHO_AM_I    0x00
+#define IMU_WHO_AM_I        0x05
+#define IMU_REG_CTRL1       0x02
+#define IMU_REG_CTRL2       0x03
+#define IMU_REG_CTRL7       0x08
+#define IMU_REG_AX_L        0x35
+#define IMU_CTRL1_AUTO_INC  0x40    // reads step through the registers; data is little-endian
+#define IMU_CTRL2_2G_120HZ  0x06    // +/-2 g, about 120 readings a second
+#define IMU_CTRL7_ACCEL_ON  0x01
+#define IMU_G_PER_COUNT     (2.0f / 32768.0f)
+#define IMU_I2C_HZ          400000
+#define IMU_TIMEOUT_MS      50
+
 // Battery voltage on GPIO8 through a 1/3 divider
 #define BAT_ADC_CHANNEL     ADC_CHANNEL_7
 #define BAT_DIVIDER         3.0f
@@ -141,6 +156,8 @@ static const char *TAG = "board";
 #define NVS_SETTINGS_KEY    "settings"
 
 static i2c_master_bus_handle_t i2c_bus;
+static i2c_master_dev_handle_t imu;
+static bool imu_tried;
 static esp_io_expander_handle_t io_expander;
 static esp_lcd_panel_handle_t panel;
 static esp_lcd_touch_handle_t touch;
@@ -162,6 +179,7 @@ static volatile bool wifi_connected;
 static esp_ip4_addr_t wifi_ip;
 
 static lv_display_t *display;
+static uint8_t rotation_turns;      // clockwise quarter turns
 static uint8_t *draw_buf1;
 static uint8_t *draw_buf2;
 static uint8_t *rotate_buf;
@@ -224,6 +242,7 @@ void rcat_hal_display_set_rotation(uint8_t quarter_turns)
         LV_DISPLAY_ROTATION_90,
     };
     lv_display_set_rotation(display, rotations[quarter_turns & 3]);
+    rotation_turns = quarter_turns & 3;
 }
 
 void rcat_hal_backlight_set(uint8_t percent)
@@ -248,6 +267,89 @@ bool rcat_hal_battery_voltage(float *volts)
         return false;
     }
     *volts = millivolts * BAT_DIVIDER / 1000.0f / BAT_CORRECTION;
+    return true;
+}
+
+/********************************************************************************
+function:	Start the IMU's accelerometer the first time it's needed. Returns
+            false if the IMU doesn't answer.
+parameter:
+********************************************************************************/
+static bool imu_start(void)
+{
+    if (imu_tried)
+    {
+        return imu != NULL;
+    }
+    imu_tried = true;
+
+    const i2c_device_config_t dev_config = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = IMU_ADDR,
+        .scl_speed_hz = IMU_I2C_HZ,
+    };
+    if (i2c_master_bus_add_device(i2c_bus, &dev_config, &imu) != ESP_OK)
+    {
+        imu = NULL;
+        return false;
+    }
+
+    uint8_t reg = IMU_REG_WHO_AM_I;
+    uint8_t id = 0;
+    const uint8_t setup[][2] = {
+        { IMU_REG_CTRL1, IMU_CTRL1_AUTO_INC },
+        { IMU_REG_CTRL2, IMU_CTRL2_2G_120HZ },
+        { IMU_REG_CTRL7, IMU_CTRL7_ACCEL_ON },
+    };
+    bool ok = i2c_master_transmit_receive(imu, &reg, 1, &id, 1, IMU_TIMEOUT_MS) == ESP_OK && id == IMU_WHO_AM_I;
+    for (size_t i = 0; ok && i < sizeof(setup) / sizeof(setup[0]); i++)
+    {
+        ok = i2c_master_transmit(imu, setup[i], 2, IMU_TIMEOUT_MS) == ESP_OK;
+    }
+    if (!ok)
+    {
+        ESP_LOGW(TAG, "No IMU (id 0x%02x)", id);
+        i2c_master_bus_rm_device(imu);
+        imu = NULL;
+    }
+    return ok;
+}
+
+bool rcat_hal_accel_read(float *x, float *y, float *z)
+{
+    if (!imu_start())
+    {
+        return false;
+    }
+
+    uint8_t reg = IMU_REG_AX_L;
+    uint8_t raw[6];
+    if (i2c_master_transmit_receive(imu, &reg, 1, raw, sizeof(raw), IMU_TIMEOUT_MS) != ESP_OK)
+    {
+        return false;
+    }
+    float a[3];
+    for (int i = 0; i < 3; i++)
+    {
+        a[i] = (int16_t)(raw[2 * i] | (raw[2 * i + 1] << 8)) * IMU_G_PER_COUNT;
+    }
+
+    // The IMU's axes in the panel's own frame (x right, y down, z out of the
+    // glass, with the USB port at the bottom). The IMU is on the back of the
+    // board, facing away from the glass.
+    float px = a[0];
+    float py = -a[1];
+    *z = -a[2];
+
+    // Then into the frame of the picture, which is turned clockwise on the panel
+    for (uint8_t i = 0; i < rotation_turns; i++)
+    {
+        float t = px;
+        px = py;
+        py = -t;
+    }
+    *x = px;
+    *y = py;
     return true;
 }
 

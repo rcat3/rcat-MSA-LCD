@@ -40,12 +40,14 @@
 extern const ui_feature_def_t feature_images;
 extern const ui_feature_def_t feature_voice;
 extern const ui_feature_def_t feature_sound;
+extern const ui_feature_def_t feature_level;
 extern const ui_feature_def_t feature_settings;
 
 static const ui_feature_def_t *const feature_defs[] = {
     &feature_images,
     &feature_voice,
     &feature_sound,
+    &feature_level,
     &feature_settings,   // last, so it can list every feature's startup choices
 };
 #define FEATURE_COUNT       (sizeof(feature_defs) / sizeof(feature_defs[0]))

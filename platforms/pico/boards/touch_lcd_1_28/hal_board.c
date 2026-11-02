@@ -133,6 +133,12 @@ bool rcat_hal_battery_voltage(float *volts)
     return true;
 }
 
+bool rcat_hal_accel_read(float *x, float *y, float *z)
+{
+    // The board has a QMI8658, but it isn't hooked up here yet.
+    return false;
+}
+
 bool rcat_hal_settings_read(void *data, size_t len)
 {
     if (len > FLASH_PAGE_SIZE)

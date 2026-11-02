@@ -35,6 +35,13 @@ void rcat_hal_backlight_set(uint8_t percent);
  * Returns false if the board can't measure it. */
 bool rcat_hal_battery_voltage(float *volts);
 
+/* Read the accelerometer, in g, in the frame of the picture as it's shown
+ * (after rcat_hal_display_set_rotation): x to the right, y down, and z out of
+ * the screen towards the viewer. At rest it reads the opposite of gravity, so
+ * a screen standing upright reads about (0, -1, 0).
+ * Returns false if the board has no accelerometer. */
+bool rcat_hal_accel_read(float *x, float *y, float *z);
+
 /* Persistent storage for one small block of settings (up to 256 bytes).
  * The caller validates the contents, so the board just stores raw bytes.
  * rcat_hal_settings_read returns false if nothing could be read (no storage,
