@@ -17,6 +17,7 @@ A 3D printable housing that screws the [Waveshare ESP32-S3-Touch-LCD-1.46](https
 
 - `msa_1_46_housing.scad` - The design, in [OpenSCAD](https://openscad.org/).  All of the dimensions are named settings at the top.
 - `msa_1_46_speaker_housing.scad` - The speaker housing (see below).
+- `render.sh` - Renders all of the speaker housing's parts to STL files.
 - `msa_1_46_board.scad` - The board's dimensions and the thread, shared by both housings.
 - `vendor/vpu_thread.stl` - The MSA thread, taken from the 1.28" design (see Credits).  It's been cleaned up into a single solid, and the original's inner lip has been removed so the inside is a plain 42 mm bore.
 
@@ -51,7 +52,7 @@ The board is turned a quarter turn, with its buttons at the top, so set the disp
 
 ### Parts
 
-Render each part with, for example, `openscad -D 'part="body"' -o body.stl msa_1_46_speaker_housing.scad`.  They're all turned the right way up to print.
+Run `./render.sh` in this folder to render every part to the `stl/` folder, or `./render.sh body back` for just those parts.  It needs [OpenSCAD](https://openscad.org/).  A single part can also be rendered by hand with, for example, `openscad -D 'part="body"' -o body.stl msa_1_46_speaker_housing.scad`.  The parts are all turned the right way up to print.
 
 - **`body`** - The display cup and the speaker pods.  It prints well standing on one of its short sides with tree supports.  Printed on its back, the curved front edges show more layer lines.
 - **`back`** - Closes the chamber, with the posts the collar turns on.  Use 4 or more walls so the posts are solid.

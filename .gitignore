@@ -21,3 +21,4 @@ managed_components/
 
 # Rendered enclosure parts (made from the .scad files)
 hardware/enclosure/*.stl
+hardware/enclosure/stl/
