@@ -51,6 +51,8 @@ header_plug = [16.9, 3.1, 4.1];    // a ribbon cable's plug: length with the cli
                                     // width, and width across the notch the ribbon leaves from
 header_plug_side = 1;               // the notch faces the center of the board (1) or away from it (-1)
 header_plug_clear = 0.3;
+header_adapter = false;             // a small PCB soldered onto the header in place of a ribbon cable
+                                    // (msa_1_46_header_adapter.scad, which has to be included too)
 usb_access = false;                 // the wall covers the USB-C port, so a battery can't be charged
                                     // at the board's 2 A by accident. Take the board out to use USB
 usb_opening = [12.4, 6.6];          // width, height of the slot for the USB-C plug. The port sits
@@ -124,7 +126,8 @@ module plate_holes()
     hc = (header_box[0] + header_box[1]) / 2;
     c = header_plug_clear;
     plug_x = header_plug_side > 0 ? hc[0] - header_plug[1] / 2 : hc[0] + header_plug[1] / 2 - header_plug[2];
-    translate([plug_x - c, hc[1] - header_plug[0] / 2 - c, plate_back - 1])
+    if (header_adapter) adapter_cut();
+    else translate([plug_x - c, hc[1] - header_plug[0] / 2 - c, plate_back - 1])
         cube([header_plug[2] + 2 * c, header_plug[0] + 2 * c, plate_t + 2]);
     translate([mic_xy[0], mic_xy[1], plate_back - 1]) cylinder(d = 2.0, h = plate_t + 2, $fn = 24);
     // One opening over the speaker and the battery connector. The battery

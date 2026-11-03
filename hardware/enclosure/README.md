@@ -70,37 +70,42 @@ Run `./render.sh` in this folder to render every part to the `stl/` folder, or `
 - A LiPo battery up to 50.5 x 34 x 9.9 mm, rated to charge at 1C (the board charges at 2 A), with a JST 1.25 plug
 - Two MAX98357A amplifier boards
 - A USB-C breakout with 5.1k resistors from CC1 and CC2 to GND
-- A 2x10 ribbon cable with 1.27 mm pitch sockets, cut to about 25-30 mm from the plug
+- The J9 header adapter in [`../header_adapter`](../header_adapter/), with its JST SH socket and 10k resistor, and a 10-pin JST SH cable (A10SR10SR30K102A, 4") cut near one end
+- Two 220 uF 10 V low-ESR electrolytic capacitors, 6.3 mm diameter
 - M2 socket head screws: four M2 x 8 for the back, four M2 x 6 for the washer, and six M2 x 10 with nuts and washers for the boards
 
 ### Putting it together
 
-1. Push the plungers in from inside the display's pocket, then fit the board.
+1. Solder the header adapter onto the board's 2x10 header (see its README).  Push the plungers in from inside the display's pocket, then fit the board.
 2. Stick each speaker into its pocket from the back.  The adhesive frame on its front holds it to the grille.
-3. Screw the amplifiers and the USB-C breakout to the back: each M2 x 10 goes through the back from outside, then a spacer, the board and a nut.  Tape the battery to the back, label side down with its leads at the lower left (seen from the front).
+3. Screw the amplifiers and the USB-C breakout to the back: each M2 x 10 goes through the back from outside, then a spacer, the board and a nut.  Tape the battery to the back with its leads at the upper left, seen from the front (upper right from the back), next to the board's battery socket.
 4. Wire it up, then screw the back on with the M2 x 8 screws.
 5. Put the gasket over the posts, then the collar, grip first.
 6. Drop each half of the washer in through the threaded end, line its holes up with two posts, and screw it down with M2 x 6 screws.  Stop when the collar turns firmly but smoothly.
 
 ### Wiring
 
-Everything but the battery connects through the ribbon on the board's 2x10 header.  The battery plugs into the board's own battery socket.
+Everything but the battery connects through the JST SH socket on the header adapter.  The plug goes in from the space below the battery.  The battery plugs into the board's own battery socket.
 
-| Header pin | Signal | Goes to |
-|---|---|---|
-| 1 | USB_5V | USB-C breakout VBUS |
-| 2 | BAT | Vin on both amplifiers |
-| 3 | GND | USB-C breakout GND |
-| 4, 12 | GND | GND on both amplifiers |
-| 11 | GPIO1 | SD on both amplifiers, and a 10k resistor to GND |
-| 13 | GPIO3 | DIN on both amplifiers |
-| 18 | GPIO12 | BCLK on both amplifiers |
-| 20 | GPIO13 | LRC on both amplifiers |
+| SH pin | Signal | Header pin | Goes to |
+|---|---|---|---|
+| 1 | GND | 3, 4, 12 | USB-C breakout GND |
+| 2 | BAT | 2 | Vin on both amplifiers |
+| 3, 4 | USB_5V | 1 | USB-C breakout VBUS |
+| 5 | GND | 3, 4, 12 | USB-C breakout GND |
+| 6 | GND | 3, 4, 12 | GND on both amplifiers |
+| 7 | SD (GPIO1) | 11 | SD on both amplifiers.  The 10k resistor to GND is on the adapter. |
+| 8 | DIN (GPIO3) | 13 | DIN on both amplifiers |
+| 9 | LRC (GPIO13) | 20 | LRC on both amplifiers |
+| 10 | BCLK (GPIO12) | 18 | BCLK on both amplifiers |
+
+Wire each amplifier signal to the first amplifier, then run a short wire from there to the same pad on the second one, so nothing needs splicing.
 
 - Each speaker connects to its amplifier's + and - outputs, neither of which is ground.  Leave GAIN unconnected.
 - BAT is connected straight to the battery, so the 10k resistor keeps the amplifiers switched off while the board is off.
-- Put a 100-220 uF capacitor across Vin and GND at each amplifier.
+- Put a 220 uF capacitor across Vin and GND at each amplifier, stripe to GND.  Lay it on its side, as standing up it nearly touches the back of the speaker.
 - Don't plug into the board's own USB-C port and the housing's at the same time.
+- To take the board out for a firmware update, take the back off, unplug the SH cable and then the battery, then take out the board's three screws and push it out the front.  The adapter comes with it.
 - The firmware sends the sound to the amplifiers when `RCAT_SPEAKER` is `EXTERNAL` in `platforms/esp-idf/features.cmake`, which is the default.  It switches them on with SD only while sound is playing.
 
 ## Travel case

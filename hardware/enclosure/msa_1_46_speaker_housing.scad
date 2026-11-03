@@ -8,9 +8,9 @@
 //    back. The speakers are sealed box modules. Each goes in from the back
 //    into a pocket behind a grille in the front face, and the adhesive frame
 //    on its front sticks it to the grille.
-//  - back: closes the chamber. The battery is taped to it, label side down with its leads at the lower
-//    left (seen from the front, where there's room for them to turn), and
-//    an amplifier is screwed to it behind each speaker.
+//  - back: closes the chamber. The battery is taped to it with its leads at
+//    the upper left (seen from the front), next to the board's battery
+//    socket, and an amplifier is screwed to it behind each speaker.
 //  - collar: carries the voice port thread and turns freely on the back, so
 //    the housing can be held level while only the collar is screwed in. It
 //    goes over four posts on the back, which end flush with the back of its
@@ -53,10 +53,16 @@ part = "preview";           // "preview", "body", "back", "collar", "washer", "g
                             // "spacers", "pod_test" or "layout"
 
 include <msa_1_46_board.scad>
+include <msa_1_46_header_adapter.scad>
 
-// The ribbon cable on the board's pin header leaves its plug towards the
-// bottom, so it comes out below the battery. Its wires are spliced in the
-// space there, between the lower cover screws.
+// The wiring connects to the board's pin header through the PCB in
+// msa_1_46_header_adapter.scad, which is soldered onto it. Its socket faces
+// the bottom, so the plug goes in from the space below the battery, between
+// the lower cover screws. Set this false for a ribbon cable's plug instead.
+header_adapter = true;
+
+// For a ribbon cable: its plug leaves the header towards the bottom, below
+// the battery. The chamber's depth allows for it either way.
 header_plug_side = -1;
 header_plug_reach = 4.1;    // from the ends of the board's standoffs to the back of the plug,
                             // with the ribbon on it
