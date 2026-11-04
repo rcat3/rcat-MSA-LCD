@@ -72,7 +72,7 @@ module header_adapter(plug = true, only = "")
         color("silver") translate([p[0], p[1], adapter_back - 0.6]) cylinder(d1 = 0.5, d2 = 1.0, h = 0.6, $fn = 16);
     }
     // The pull-down resistor (0603), beside the pins on the inner side
-    if (show("pcb")) color("black") translate([-11.9 - 0.4, -0.8, adapter_back - 0.45]) cube([0.8, 1.6, 0.45]);
+    if (show("pcb")) color("black") translate([-11.9 - 0.4, 1.0 - 0.8, adapter_back - 0.45]) cube([0.8, 1.6, 0.45]);
     // The socket, opening flush with the edge
     if (show("socket")) color("white") translate([adapter_sock_front, adapter_hc[1] - adapter_conn[0] / 2, adapter_back - adapter_conn[2]])
         difference()

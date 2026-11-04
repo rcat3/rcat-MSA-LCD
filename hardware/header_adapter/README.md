@@ -2,7 +2,9 @@
 
 A small PCB that solders onto the 2x10, 1.27 mm pin header (J9) on the back of the Waveshare ESP32-S3-Touch-LCD-1.46. It replaces the ribbon cable in the speaker housing (`hardware/enclosure/msa_1_46_speaker_housing.scad`). All the wiring to the back of the housing plugs into one 10-pin JST SH socket on it. To take the board out for a firmware update, you unplug that socket and the battery, and nothing has to be cut or desoldered.
 
-**Status: not built yet.**  The layout passes KiCad's design rules check. It hasn't been ordered or fitted.
+**Status: not built yet.**  The layout passes KiCad's design rules check. It hasn't been fitted.
+
+The first version (in the commit that added this folder) had the header's two rows swapped, a mirror image of the real header, so every pad sat on the other pin of its pair.  Don't fit a board from those Gerbers: it would connect the USB 5V to the battery.  This version has pin 1's row along the edge, next to the socket, and was checked pin by pin against the board's silkscreen.
 
 ## Files
 
@@ -47,7 +49,7 @@ Wire each amplifier signal to the first amplifier's pad. Then run a short wire f
 ## Assembly
 
 1. Solder J2 and R1 to the adapter first, while it's flat.
-2. Hold the Waveshare board with its back towards you and the USB-C port at the bottom.  Pin 1 of J9 is at the lower left of the header.  Fit the adapter over the pins with its square pad, marked "1", on pin 1.  The socket faces away from the header, towards the micro SD side.
+2. Hold the Waveshare board with its back towards you and the USB-C port to the left.  The header then runs left to right, with pin 1 (the dot, labelled 5V) at its lower left.  The lower row (5V, G, DN, DP and so on) runs along the board's edge, and the upper row (BAT, G, SCL, SDA and so on) is towards the middle.  Fit the adapter over the pins with its square pad, marked "1", on pin 1.  The socket is then below the header, facing the board's edge (the micro SD side).
 3. Push it down until it sits on the header's plastic.  The pins stand about 1.8 mm out of the adapter.
 4. Solder all 20 pins, including the unused ones, for strength.
 5. Check with a meter that USB_5V, BAT and GND aren't shorted to each other, and that SD reads about 10k to GND.
