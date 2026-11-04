@@ -37,3 +37,18 @@ CONFIG_LWIP_IRAM_OPTIMIZATION=n
 # SD card: long file names, so images keep their names
 CONFIG_FATFS_LFN_HEAP=y
 CONFIG_FATFS_MAX_LFN=255
+
+# Bluetooth LE (the Lovense feature): NimBLE as a central only, with up to
+# three connections (RCAT_HAL_BLE_MAX_LINKS), no pairing, and its memory in
+# PSRAM. It only starts when it's first used. The controller sets aside room
+# for its activities when it starts, so the three links and the scan don't
+# take more internal RAM as they're used.
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=y
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=y
+CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=n
+CONFIG_BT_NIMBLE_ROLE_BROADCASTER=n
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=3
+CONFIG_BT_NIMBLE_SECURITY_ENABLE=n
+CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=y

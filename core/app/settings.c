@@ -37,6 +37,7 @@ static void set_defaults(settings_t *s)
     s->sound_autoplay = 0;
     s->sound_track[0] = '\0';
     s->voice_effect = 0;
+    s->lovense_release_to_zero = 0;
 }
 
 static uint32_t checksum(const void *data, size_t len)
@@ -86,6 +87,7 @@ static bool load(settings_t *out)
     out->sound_autoplay = out->sound_autoplay ? 1 : 0;
     out->sound_track[SETTINGS_NAME_LEN - 1] = '\0';
     // voice_effect is checked against the preset list by the UI
+    out->lovense_release_to_zero = out->lovense_release_to_zero ? 1 : 0;
     return true;
 }
 
@@ -191,5 +193,11 @@ void settings_set_sound_track(const char *name)
 {
     strncpy(current.sound_track, name, SETTINGS_NAME_LEN - 1);
     current.sound_track[SETTINGS_NAME_LEN - 1] = '\0';
+    schedule_save();
+}
+
+void settings_set_lovense_release_to_zero(uint8_t enabled)
+{
+    current.lovense_release_to_zero = enabled ? 1 : 0;
     schedule_save();
 }

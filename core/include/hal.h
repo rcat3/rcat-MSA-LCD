@@ -88,6 +88,64 @@ bool rcat_hal_wifi_address(char *ip, size_t len);
  * false if the board has no card slot or no readable card. */
 bool rcat_hal_storage_mount(const char **path);
 
+/*
+ * Bluetooth LE, as a central that talks to a few devices at once, each over
+ * a serial-style link: a service with a characteristic it writes to and one
+ * it gets notifications from. The Bluetooth stack starts the first time it's
+ * needed. Everything here is safe to call from the UI loop and returns
+ * straight away; poll rcat_hal_ble_link_state() to follow what's happening.
+ */
+#define RCAT_HAL_BLE_MAX_LINKS  3
+
+typedef struct
+{
+    uint8_t addr[6];
+    uint8_t addr_type;
+    int8_t rssi;            // signal strength of the last advertisement, in dBm
+    char name[32];          // advertised name
+} rcat_hal_ble_device_t;
+
+typedef enum
+{
+    RCAT_HAL_BLE_IDLE,
+    RCAT_HAL_BLE_CONNECTING,    // connecting, or finding the link's characteristics
+    RCAT_HAL_BLE_CONNECTED,     // the link is ready for rcat_hal_ble_send()
+} rcat_hal_ble_state_t;
+
+/* Picks the service to use as the link. uuid is the service's 128-bit UUID in
+ * the order it's written as text (16-bit UUIDs are expanded with the
+ * Bluetooth base UUID). Called on the Bluetooth task, so it must not call
+ * LVGL or block. */
+typedef bool (*rcat_hal_ble_service_match_t)(const uint8_t uuid[16]);
+
+/* Start looking for devices, forgetting the ones found before. Only devices
+ * that advertise a name are kept. It carries on while links are connected,
+ * pausing while one connects. Returns false if the board has no Bluetooth. */
+bool rcat_hal_ble_scan_start(void);
+void rcat_hal_ble_scan_stop(void);
+
+/* Copy up to max of the devices found so far. Returns how many were copied. */
+size_t rcat_hal_ble_scan_results(rcat_hal_ble_device_t *devices, size_t max);
+
+/* Connect to a device, using the first service that match accepts. In that
+ * service, the first characteristic that can be written to carries what's
+ * sent, and the first that notifies carries what's received. Returns the
+ * link's number (0 to RCAT_HAL_BLE_MAX_LINKS - 1), or -1 if there's no free
+ * link or another one is still connecting. If the connection fails, or there's
+ * no such service, the link goes back to idle. */
+int rcat_hal_ble_connect(const rcat_hal_ble_device_t *device, rcat_hal_ble_service_match_t match);
+void rcat_hal_ble_disconnect(int link);
+
+rcat_hal_ble_state_t rcat_hal_ble_link_state(int link);
+
+/* Send bytes over a link. Returns false if it isn't connected or the write
+ * couldn't be queued. */
+bool rcat_hal_ble_send(int link, const void *data, size_t len);
+
+/* Take up to max of the bytes received on a link since the last call (the
+ * board keeps about 256 per link). Returns how many were copied. */
+size_t rcat_hal_ble_receive(int link, void *data, size_t max);
+
 void rcat_hal_delay_ms(uint32_t ms);
 
 #endif

@@ -39,6 +39,7 @@ The display is organized into features.  **Swipe up and down** to move between f
 | **Images** | Each image (images from the SD card first), then a blank (black) page. |
 | **Voice** (boards with a microphone) | **KITT**: three columns of red bars that light up with your voice, like KITT's voice box in Knight Rider.  **Voice Ring**: turns on a ring around the edge of the screen that glows with your voice while the Images feature is showing, and picks its color.  **Voice Effect**: changes your voice (see [Voice Effects](#voice-effects-esp32-s3-board)).  **Voice Lab** (boards with WiFi): streams the microphone to a computer, for trying out voice effects (see [Voice Lab](#voice-lab-esp32-s3-board)). |
 | **Sound** (boards with a speaker) | **Player**: plays the sound files on the SD card, with previous, play/pause and next buttons.  Sound keeps playing in the background while you look at images or anything else.  **Options**: the volume, what happens at the end of a track (*Repeat all*, *Repeat one* or *Play once*), and *Play at startup*, which starts playing the last track as soon as the display turns on. |
+| **Lovense** (boards with Bluetooth) | Controls up to three Lovense devices at once.  **Control**: a ring around the edge for each of the device's motors (vibration, rotation, the Max's air pump and so on), with the level on its knob, 0 to 20 for most.  Drag a knob around its ring to set the level.  Only the knobs respond, so you can swipe from anywhere else.  The device's name is in the middle, with arrows either side to step through the connected devices.  **STOP** stops every device as soon as you touch it.  **Devices**: turn your devices on and they show up here while it's on screen.  Tap one to connect (it turns green), or tap it again to stop it and disconnect.  **Options**: *Motor Hold*: on, a motor keeps its level when you let go of its knob; off, it springs back to 0.  The connections stay up while you look at other features. |
 | **Settings** | **Brightness**: the backlight brightness, plus the battery voltage.  **Rotation**: rotates the whole display in 90 degree steps, which helps if the display ends up sitting at an angle in the mask's threads.  The new rotation is applied about a second after you stop scrolling the roller.  **Startup**: picks what's shown when the display turns on (any image, KITT or the blank page). |
 
 On pages with a slider or roller, start your swipe beside it rather than on it, or you'll move the control instead of the page.
@@ -56,7 +57,8 @@ The KITT bars and the voice ring adjust to the surroundings on their own.  A qui
 - **SD card:** images on the card are shown along with the built-in ones.  See [Images on the SD Card](#images-on-the-sd-card-esp32-s3-board).
 - **Speaker:** plays sound files from the SD card (see [Sounds on the SD Card](#sounds-on-the-sd-card-esp32-s3-board)).  The small round trimmer on the back of the board sets the speaker's volume, on top of the volume setting.
 - **WiFi:** used by the Voice Lab, only while it's switched on.
-- **Not used yet:** the IMU, clock chip and Bluetooth.
+- **Bluetooth:** used by the Lovense feature.  It starts the first time you tap Connect.
+- **Not used yet:** the clock chip.
 - **Housing:** there's a 3D printable housing for this board, and a travel case for it, in [`hardware/`](hardware/enclosure/).
 
 ## Software
@@ -300,7 +302,7 @@ The ESP32-S3 board decodes GIFs into its 8MB of PSRAM, so even full screen GIFs 
 ## Project layout
 
 - `core/` - The application itself (UI, image list, settings).  This code doesn't depend on any particular board.
-- `core/include/hal.h` - The small set of functions each board has to provide (display, touch, backlight, battery, settings storage, microphone, speaker, SD card).
+- `core/include/hal.h` - The small set of functions each board has to provide (display, touch, backlight, battery, settings storage, microphone, speaker, SD card, WiFi, Bluetooth).
 - `core/features.cmake` - The list of optional features.  Each platform's `features.cmake` picks which ones to build.
 - `platforms/pico/` - Build files for the Raspberry Pi RP2040/RP2350 boards.  `boards/*.cmake` lists the supported boards, and `boards/touch_lcd_1_28/` has the Waveshare drivers for the 1.28" round display.
 - `platforms/esp-idf/` - Build files for the ESP32 boards.  `boards/` has one folder per board with its drivers, pin assignments and settings.

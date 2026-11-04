@@ -3,7 +3,7 @@
  * LVGL configuration for the esp-idf platform, generated from the LVGL
  * v9.6.0 lv_conf_template.h by tools/gen_lv_conf.py. Edit that script
  * rather than this file. Changes from the template:
- *   LV_USE_STDLIB_MALLOC = LV_STDLIB_CLIB: C library malloc (can use PSRAM on the ESP32)
+ *   LV_USE_STDLIB_MALLOC = LV_STDLIB_CUSTOM: PSRAM first (the board's lvgl_mem.c)
  *   LV_DEF_REFR_PERIOD = 10: refresh often, for smooth swiping
  *   LV_USE_GIF = 1: animated GIFs
  *   LV_FONT_MONTSERRAT_24 = 1: for larger screens
@@ -50,7 +50,7 @@
  *  - LV_STDLIB_RTTHREAD
  *  - LV_STDLIB_CUSTOM: Custom (implemented externally)
  */
-#define LV_USE_STDLIB_MALLOC LV_STDLIB_CLIB
+#define LV_USE_STDLIB_MALLOC LV_STDLIB_CUSTOM
 
 /** String functions source
  *  Possible values:

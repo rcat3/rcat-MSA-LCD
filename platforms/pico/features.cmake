@@ -5,3 +5,4 @@ set(RCAT_FEATURE_IMAGES ON)     # images and animations
 set(RCAT_FEATURE_VOICE  ON)     # microphone level displays and voice settings
 set(RCAT_FEATURE_SOUND  ON)     # sound file player
 set(RCAT_FEATURE_LEVEL  OFF)    # spirit level. These boards' accelerometer isn't supported yet
+set(RCAT_FEATURE_LOVENSE OFF)   # Lovense control. These boards have no Bluetooth

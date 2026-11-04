@@ -24,6 +24,9 @@ COMMON = {
 PLATFORMS = {
     "pico": {},
     "esp-idf": {
+        # LVGL's memory from PSRAM, leaving internal RAM for DMA, WiFi and
+        # Bluetooth (see the board's lvgl_mem.c)
+        "LV_USE_STDLIB_MALLOC": ("LV_STDLIB_CUSTOM", "PSRAM first (the board's lvgl_mem.c)"),
         "LV_FONT_MONTSERRAT_24": ("1", "for larger screens"),
         # Images on the SD card
         "LV_USE_FS_STDIO": ("1", "SD card files, drive letter S"),

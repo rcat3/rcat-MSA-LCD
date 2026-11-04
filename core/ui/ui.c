@@ -43,6 +43,7 @@ extern const ui_feature_def_t feature_images;
 extern const ui_feature_def_t feature_voice;
 extern const ui_feature_def_t feature_sound;
 extern const ui_feature_def_t feature_level;
+extern const ui_feature_def_t feature_lovense;
 extern const ui_feature_def_t feature_settings;
 
 static const ui_feature_def_t *const feature_defs[] = {
@@ -57,6 +58,9 @@ static const ui_feature_def_t *const feature_defs[] = {
 #endif
 #if RCAT_FEATURE_LEVEL
     &feature_level,
+#endif
+#if RCAT_FEATURE_LOVENSE
+    &feature_lovense,
 #endif
     &feature_settings,   // last, so it can list every feature's startup choices
 };
