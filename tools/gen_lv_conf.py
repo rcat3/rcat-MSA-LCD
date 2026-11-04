@@ -34,6 +34,8 @@ PLATFORMS = {
         "LV_USE_LODEPNG": ("1", "PNG"),
         "LV_USE_BMP": ("1", "BMP"),
         "LV_USE_LIBJPEG_TURBO": ("1", "JPEG, including progressive JPEG"),
+        # For joining the phone remote's hotspot
+        "LV_USE_QRCODE": ("1", "QR codes"),
     },
 }
 

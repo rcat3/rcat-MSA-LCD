@@ -83,6 +83,22 @@ void rcat_hal_wifi_disconnect(void);
  * isn't connected. */
 bool rcat_hal_wifi_address(char *ip, size_t len);
 
+/* Run a WiFi hotspot of the board's own for phones to join, secured with WPA2
+ * and password (8 to 63 characters). The board is at RCAT_HAL_HOTSPOT_ADDRESS
+ * on it, hands out addresses to what joins, and tells it to use the board for
+ * DNS. As with rcat_hal_wifi_connect(), the core then uses BSD sockets. The
+ * board can't do both at once: starting either one stops the other. Returns
+ * false if the board has no WiFi. */
+#define RCAT_HAL_HOTSPOT_ADDRESS "192.168.4.1"
+bool rcat_hal_hotspot_start(const char *ssid, const char *password);
+void rcat_hal_hotspot_stop(void);
+
+/* How many phones (or anything else) have joined the hotspot. */
+int rcat_hal_hotspot_clients(void);
+
+/* A random number, as good as the board can make, for passwords. */
+uint32_t rcat_hal_random(void);
+
 /* Mount removable storage (the SD card). On success, *path is set to where
  * it's mounted, e.g. "/sdcard", for use with fopen() and friends. Returns
  * false if the board has no card slot or no readable card. */

@@ -11,6 +11,7 @@
  *   LV_USE_LODEPNG = 1: PNG
  *   LV_USE_BMP = 1: BMP
  *   LV_USE_LIBJPEG_TURBO = 1: JPEG, including progressive JPEG
+ *   LV_USE_QRCODE = 1: QR codes
  * The RGB565 byte swap the panels need is done in the display flush callback.
  */
 
@@ -1491,7 +1492,7 @@
  *
  *  Enable: LV_USE_CANVAS
  */
-#define LV_USE_QRCODE 0
+#define LV_USE_QRCODE 1
 
 /** Legacy rlottie binding, kept for compatibility. Use LV_USE_LOTTIE instead. */
 #define LV_USE_RLOTTIE 0

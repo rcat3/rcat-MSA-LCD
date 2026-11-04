@@ -201,3 +201,12 @@ void settings_set_lovense_release_to_zero(uint8_t enabled)
     current.lovense_release_to_zero = enabled ? 1 : 0;
     schedule_save();
 }
+
+void settings_set_remote(const char *ssid, const char *password)
+{
+    strncpy(current.remote_ssid, ssid, SETTINGS_REMOTE_LEN - 1);
+    current.remote_ssid[SETTINGS_REMOTE_LEN - 1] = '\0';
+    strncpy(current.remote_password, password, SETTINGS_REMOTE_LEN - 1);
+    current.remote_password[SETTINGS_REMOTE_LEN - 1] = '\0';
+    schedule_save();
+}

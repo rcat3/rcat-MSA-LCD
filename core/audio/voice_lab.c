@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "app/remote.h"
 #include "audio/mic.h"
 #include "audio/voice_lab.h"
 #include "hal.h"
@@ -174,6 +175,7 @@ const char *voice_lab_start(void)
     {
         return "Put wifi.txt on the SD card (see the README)";
     }
+    remote_stop();      // its hotspot uses the WiFi too
     if (!rcat_hal_wifi_connect(ssid, password))
     {
         return "WiFi didn't start";
@@ -185,6 +187,11 @@ const char *voice_lab_start(void)
     }
     started = true;
     return NULL;
+}
+
+bool voice_lab_running(void)
+{
+    return started;
 }
 
 void voice_lab_stop(void)
@@ -273,6 +280,7 @@ void voice_lab_status(char *text, size_t len)
 
 void voice_lab_init(const char *storage_path) {}
 bool voice_lab_available(void) { return false; }
+bool voice_lab_running(void) { return false; }
 const char *voice_lab_start(void) { return "No WiFi"; }
 void voice_lab_stop(void) {}
 void voice_lab_poll(uint32_t now_ms) {}

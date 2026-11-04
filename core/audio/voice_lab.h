@@ -30,6 +30,10 @@ void voice_lab_init(const char *storage_path);
 /* True on boards that can stream (WiFi and a microphone). */
 bool voice_lab_available(void);
 
+/* True between voice_lab_start() and voice_lab_stop(). The Lovense phone
+ * remote stops it, as the WiFi can't do both. */
+bool voice_lab_running(void);
+
 /* Join the network and start listening for the monitor. Returns NULL, or a
  * message saying why it couldn't start. */
 const char *voice_lab_start(void);

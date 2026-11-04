@@ -212,6 +212,31 @@ bool rcat_hal_wifi_address(char *ip, size_t len)
     return false;
 }
 
+bool rcat_hal_hotspot_start(const char *ssid, const char *password)
+{
+    return false;
+}
+
+void rcat_hal_hotspot_stop(void)
+{
+}
+
+int rcat_hal_hotspot_clients(void)
+{
+    return 0;
+}
+
+uint32_t rcat_hal_random(void)
+{
+    // Only used for hotspot passwords, which this board doesn't have
+    static uint32_t state = 2463534242u;
+    state ^= time_us_32();
+    state ^= state << 13;
+    state ^= state >> 17;
+    state ^= state << 5;
+    return state;
+}
+
 bool rcat_hal_storage_mount(const char **path)
 {
     // No card slot on this board.

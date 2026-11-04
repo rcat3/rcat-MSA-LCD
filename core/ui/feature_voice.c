@@ -29,6 +29,7 @@ static lv_obj_t *ring_page;
 static lv_obj_t *ring_switch;
 static lv_obj_t *ring_roller;
 static lv_obj_t *lab_status_label;
+static lv_obj_t *lab_switch;
 
 #define LAB_POLL_MS 250
 
@@ -148,6 +149,12 @@ static void add_effect_page(ui_feature_t *feature)
 
 static void lab_timer_cb(lv_timer_t *t)
 {
+    if (!voice_lab_running())
+    {
+        // Stopped by something else that needed the WiFi (the phone remote)
+        lv_obj_remove_state(lab_switch, LV_STATE_CHECKED);
+        lv_timer_pause(t);
+    }
     voice_lab_poll(lv_tick_get());
 
     char text[64];
@@ -200,6 +207,7 @@ static void add_lab_page(ui_feature_t *feature)
     lv_timer_pause(timer);
 
     lv_obj_t *sw = lv_switch_create(page);
+    lab_switch = sw;
     lv_obj_align(sw, LV_ALIGN_CENTER, 0, ui_px(-6));
     lv_obj_add_event_cb(sw, lab_switch_event_cb, LV_EVENT_VALUE_CHANGED, timer);
 

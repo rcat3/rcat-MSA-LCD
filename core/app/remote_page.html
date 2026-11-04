@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>RCAT Remote</title>
+<style>
+:root {
+  --bg: #000; --surface: #1c1c1c; --outline: #3a3a3a; --track: #262626;
+  --text: #fff; --muted: #8a8a8a; --accent: #e91e63; --ok: #4caf50; --stop: #d32f2f;
+  --m0: #e91e63; --m1: #9c27b0; --m2: #00bcd4;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body { padding: 12px 16px 104px; max-width: 520px; margin: 0 auto;
+  -webkit-user-select: none; user-select: none; }
+h1 { font-size: 20px; font-weight: 600; margin: 4px 0 12px; display: flex; align-items: center; gap: 8px; }
+h1 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); }
+h1 .dot.off { background: var(--stop); }
+h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .08em; margin: 24px 0 8px; }
+.card { background: var(--surface); border: 1px solid var(--outline); border-radius: 18px;
+  padding: 14px 16px; margin-bottom: 10px; }
+.card .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.card .name { font-weight: 600; font-size: 18px; }
+.muted { color: var(--muted); font-size: 14px; }
+.motor { margin: 14px 0 6px; }
+.motor .row { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); }
+.motor .row b { color: var(--text); font-weight: 600; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px;
+  background: transparent; margin: 2px 0; touch-action: none; }
+input[type=range]::-webkit-slider-runnable-track { height: 12px; border-radius: 6px;
+  background: linear-gradient(to right, var(--c) var(--p), var(--track) var(--p)); }
+input[type=range]::-moz-range-track { height: 12px; border-radius: 6px;
+  background: linear-gradient(to right, var(--c) var(--p), var(--track) var(--p)); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px;
+  margin-top: -10px; border-radius: 50%; background: #fff; border: 4px solid var(--c); }
+input[type=range]::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; border: 4px solid var(--c); }
+.live { height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; margin: 0 2px; }
+.live i { display: block; height: 100%; width: 0; background: var(--c); transition: width .15s linear; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+button { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--outline);
+  border-radius: 999px; padding: 12px 16px; min-height: 48px; cursor: pointer; }
+button:active { background: var(--outline); }
+button.on { border-color: var(--accent); color: var(--accent); }
+button.ok { border-color: var(--ok); color: var(--ok); }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
+.chips button { flex: none; min-height: 40px; padding: 8px 14px; font-size: 14px; }
+.speed { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 12px; }
+.speed button { width: 48px; padding: 0; font-size: 22px; }
+.speed span { min-width: 110px; text-align: center; color: var(--muted); }
+.list button { display: flex; width: 100%; justify-content: space-between; margin-bottom: 8px;
+  border-radius: 16px; text-align: left; }
+.status { text-align: center; color: var(--muted); min-height: 22px; margin-top: 8px; }
+#stop { position: fixed; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom));
+  max-width: 488px; margin: 0 auto; height: 64px; border: 0; border-radius: 999px;
+  background: var(--stop); color: #fff; font-size: 22px; font-weight: 700; letter-spacing: .1em;
+  box-shadow: 0 0 0 6px var(--bg); }
+#stop:active { background: #9a0007; }
+#toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: #333;
+  color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 15px; opacity: 0;
+  transition: opacity .2s; pointer-events: none; white-space: nowrap; }
+#toast.show { opacity: 1; }
+.empty { color: var(--muted); text-align: center; padding: 18px 0; }
+</style>
+</head>
+<body>
+<h1><span class="dot" id="dot"></span>RCAT Remote</h1>
+
+<div id="controls"></div>
+
+<h2>Patterns</h2>
+<div class="chips" id="targets"></div>
+<div class="grid" id="patterns"></div>
+<div class="speed">
+  <button id="slower" aria-label="Slower">&minus;</button>
+  <span id="speed">Speed 100%</span>
+  <button id="faster" aria-label="Faster">+</button>
+</div>
+
+<h2 id="react-title">React to</h2>
+<div class="grid" id="modes"></div>
+<div class="status" id="react-status"></div>
+
+<h2>Devices</h2>
+<div class="list" id="devices"></div>
+<button id="search" style="width:100%">Search</button>
+
+<button id="stop">STOP</button>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const colors = ["var(--m0)", "var(--m1)", "var(--m2)"];
+let info = { patterns: [], modes: [], max_connected: 3 };
+let state = null;
+let target = -1;                // where patterns play: -1 for every device
+let online = true;
+const dragging = new Set();     // sliders under a finger: the page leaves them alone
+const pending = new Map();      // levels waiting to go out, newest only
+let sending = false;
+
+function api(path, params, post) {
+  const q = params ? "?" + new URLSearchParams(params) : "";
+  return fetch("/api/" + path + q, { method: post ? "POST" : "GET", cache: "no-store" })
+    .then(r => r.json())
+    .then(s => { setOnline(true); return s; })
+    .catch(e => { setOnline(false); throw e; });
+}
+function command(path, params) { return api(path, params, true).then(show).catch(() => {}); }
+
+function setOnline(on) {
+  if (on !== online) { online = on; $("dot").classList.toggle("off", !on); }
+}
+
+let toastTimer;
+function toast(text) {
+  $("toast").textContent = text;
+  $("toast").classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").classList.remove("show"), 2500);
+}
+
+// One level request at a time, sending the newest value for each motor,
+// so a fast drag doesn't pile requests up.
+function sendLevels() {
+  if (sending || pending.size === 0) return;
+  const [key, params] = pending.entries().next().value;
+  pending.delete(key);
+  sending = true;
+  api("level", params, true).then(show).catch(() => {}).finally(() => { sending = false; sendLevels(); });
+}
+function setLevel(d, m, v, release) {
+  const params = { d, m, v };
+  if (release) params.release = 1;
+  pending.set(d + "." + m, params);
+  sendLevels();
+}
+
+const connected = () => state ? state.devices.filter(d => d.state === "connected") : [];
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function fill(slider) {
+  const p = slider.max > 0 ? 100 * slider.value / slider.max : 0;
+  slider.style.setProperty("--p", p + "%");
+}
+
+// The motor controls, one card per connected device. They're rebuilt only
+// when the devices or their motors change, so a slider isn't replaced mid-drag.
+let controlsKey = "";
+function showControls() {
+  const devs = connected();
+  const key = devs.map(d => d.slot + ":" + d.motors.map(m => m.kind + m.max).join()).join("|");
+  const box = $("controls");
+  if (key !== controlsKey) {
+    controlsKey = key;
+    box.replaceChildren();
+    if (devs.length === 0) {
+      box.append(el("div", "card empty", "Nothing connected yet. Search for devices below."));
+    }
+    for (const d of devs) {
+      const card = el("div", "card");
+      card.id = "dev" + d.slot;
+      const top = el("div", "top");
+      top.append(el("span", "name", d.model), el("span", "muted"));
+      card.append(top);
+      d.motors.forEach((m, i) => {
+        const motor = el("div", "motor");
+        motor.style.setProperty("--c", colors[i % colors.length]);
+        const row = el("div", "row");
+        row.append(el("span", "", m.kind), el("b"));
+        const slider = el("input");
+        slider.type = "range"; slider.min = 0; slider.max = m.max; slider.step = 1;
+        const id = d.slot + "." + i;
+        slider.addEventListener("pointerdown", () => dragging.add(id));
+        slider.addEventListener("input", () => {
+          dragging.add(id); fill(slider);
+          row.lastChild.textContent = slider.value;
+          setLevel(d.slot, i, slider.value, false);
+        });
+        const release = () => {
+          if (!dragging.has(id)) return;
+          dragging.delete(id);
+          setLevel(d.slot, i, slider.value, true);
+        };
+        slider.addEventListener("change", release);
+        slider.addEventListener("pointerup", release);
+        slider.addEventListener("pointercancel", release);
+        const live = el("div", "live");
+        live.append(el("i"));
+        motor.append(row, slider, live);
+        card.append(motor);
+      });
+      box.append(card);
+    }
+  }
+  for (const d of devs) {
+    const card = $("dev" + d.slot);
+    if (!card) continue;
+    let note = d.battery >= 0 ? d.battery + "%" : "";
+    if (d.pattern >= 0 && info.patterns[d.pattern]) note = "▶ " + info.patterns[d.pattern] + (note ? "  ·  " + note : "");
+    card.querySelector(".top .muted").textContent = note;
+    card.querySelectorAll(".motor").forEach((motor, i) => {
+      const m = d.motors[i];
+      const slider = motor.querySelector("input");
+      const value = d.driven ? m.cap : m.level;
+      if (!dragging.has(d.slot + "." + i) && !pending.has(d.slot + "." + i)) {
+        slider.value = value; fill(slider);
+        motor.querySelector(".row b").textContent = d.driven ? "up to " + value : value;
+      }
+      // While a pattern or reaction drives it, the slider sets how high it
+      // goes, and the thin bar shows the level as it plays.
+      motor.querySelector(".live").style.visibility = d.driven ? "visible" : "hidden";
+      motor.querySelector(".live i").style.width = (m.max ? 100 * m.level / m.max : 0) + "%";
+    });
+  }
+}
+
+function playingOnTarget(p) {
+  const devs = connected();
+  if (target >= 0) { const d = devs.find(d => d.slot === target); return !!d && d.pattern === p; }
+  return devs.length > 0 && devs.every(d => d.pattern === p);
+}
+
+let targetsKey = "";
+function showPatterns() {
+  const devs = connected();
+  if (target >= 0 && !devs.some(d => d.slot === target)) target = -1;
+  const key = target + "|" + devs.map(d => d.slot + d.model).join();
+  if (key !== targetsKey) {
+    targetsKey = key;
+    const box = $("targets");
+    box.replaceChildren();
+    if (devs.length > 1) {
+      const choices = [[-1, "All devices"]].concat(devs.map(d => [d.slot, d.model]));
+      for (const [slot, name] of choices) {
+        const b = el("button", slot === target ? "on" : "", name);
+        b.onclick = () => { target = slot; showPatterns(); };
+        box.append(b);
+      }
+    }
+  }
+  const buttons = $("patterns").children;
+  for (let i = 0; i < buttons.length; i++) buttons[i].classList.toggle("on", playingOnTarget(i));
+  $("speed").textContent = "Speed " + state.speed + "%";
+}
+
+function showModes() {
+  const buttons = $("modes").children;
+  for (const b of buttons) b.classList.toggle("on", +b.dataset.mode === state.react);
+  $("react-status").textContent = state.react ? state.status : "";
+}
+
+function showDevices() {
+  const box = $("devices");
+  box.replaceChildren();
+  for (const d of state.devices) {
+    const b = el("button", d.state === "connected" ? "ok" : "");
+    let right = { connecting: "…", failed: "failed", lost: "lost", found: "connect" }[d.state] || "";
+    if (d.state === "connected") right = (d.battery >= 0 ? d.battery + "%  " : "") + "✓";
+    b.append(el("span", "", d.state === "connected" ? d.model : d.name), el("span", "muted", right));
+    b.onclick = () => command("connect", { d: d.slot });
+    box.append(b);
+  }
+  if (state.devices.length === 0) box.append(el("div", "empty", state.scan ? "Searching…" : "No devices found yet"));
+  $("search").textContent = state.scan ? "Searching…" : "Search";
+  $("search").classList.toggle("on", !!state.scan);
+}
+
+function show(s) {
+  state = s;
+  if (s.notice) toast(s.notice);
+  showControls();
+  showPatterns();
+  showModes();
+  showDevices();
+}
+
+function build() {
+  const grid = $("patterns");
+  info.patterns.forEach((name, i) => {
+    const b = el("button", "", name);
+    b.onclick = () => {
+      if (connected().length === 0) { toast("Connect a device first"); return; }
+      command("play", { d: target, p: playingOnTarget(i) ? -1 : i });
+    };
+    grid.append(b);
+  });
+  const modes = $("modes");
+  for (const [id, name] of info.modes) {
+    const b = el("button", "", name);
+    b.dataset.mode = id;
+    b.onclick = () => command("react", { m: state && state.react === id ? 0 : id });
+    modes.append(b);
+  }
+  if (info.modes.length === 0) { $("react-title").hidden = true; }
+}
+
+$("slower").onclick = () => command("speed", { v: Math.max(25, state.speed - 25) });
+$("faster").onclick = () => command("speed", { v: Math.min(300, state.speed + 25) });
+$("search").onclick = () => command("scan", { on: 1 });
+// Stop as soon as it's touched, not when the finger lifts
+$("stop").addEventListener("pointerdown", e => { e.preventDefault(); pending.clear(); command("stop"); });
+
+let polling = false;
+function poll() {
+  if (polling || sending || document.hidden) return;
+  polling = true;
+  api("state").then(show).catch(() => {}).finally(() => { polling = false; });
+}
+
+api("info").then(i => { info = i; build(); }).catch(() => {}).finally(() => {
+  poll();
+  setInterval(poll, 400);
+});
+</script>
+</body>
+</html>
