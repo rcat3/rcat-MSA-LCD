@@ -1,4 +1,5 @@
 #include "app.h"
+#include "app/patterns.h"
 #include "app/settings.h"
 #include "audio/audio_level.h"
 #include "audio/audio_player.h"
@@ -57,6 +58,7 @@ void app_run(void)
     audio_level_start();                // does nothing on boards without a microphone
     audio_player_init(storage_path);    // or a speaker
     voice_lab_init(storage_path);
+    patterns_init(storage_path);        // for the Lovense feature
     ui_init();
 
     while (1)

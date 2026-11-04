@@ -1,7 +1,13 @@
 # The portable application code in core/, built as an ESP-IDF component.
 set(CORE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../core)
 
-file(GLOB_RECURSE CORE_SOURCES ${CORE_DIR}/*.c)
+# CONFIGURE_DEPENDS so a new source file is picked up without a reconfigure.
+# ESP-IDF first reads this file as a script, where it isn't allowed.
+if(CMAKE_BUILD_EARLY_EXPANSION)
+    file(GLOB_RECURSE CORE_SOURCES ${CORE_DIR}/*.c)
+else()
+    file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS ${CORE_DIR}/*.c)
+endif()
 
 # Optional features, chosen in platforms/esp-idf/features.cmake
 include(${CMAKE_CURRENT_LIST_DIR}/../../features.cmake)

@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "app/lovense.h"
+#include "app/patterns.h"
 #include "hal.h"
 
 #define SEND_GAP_MS         100     // at most one command per device this often
@@ -115,6 +116,7 @@ typedef struct
     uint32_t last_identify_ms;
     uint32_t last_battery_ms;
     uint32_t stop_ms;               // when it was told to stop before disconnecting, or 0
+    uint32_t pattern_ms;            // how far into its pattern it is, at the pattern's own speed
     bool battery_asked;
     char reply[32];
     size_t reply_len;
@@ -123,6 +125,10 @@ typedef struct
 static slot_t slots[LOVENSE_MAX_DEVICES];
 static bool scanning;
 static uint32_t now;                // the time of the last poll
+static uint32_t last_poll;
+static uint16_t speed = 100;        // percent
+static bool reactive;
+static float reactive_factor = 1;
 
 /* XXXX00?1-002?-4bd4-bbd5-a6920e4c5653 (the usual one), the Nordic UART
  * service, or 0000fff0 on some older devices. */
@@ -182,9 +188,11 @@ static void set_model(slot_t *s, const model_t *m)
         s->pub.motors[i].kind = m->kinds[i];
         s->pub.motors[i].max = m->kinds[i] == LOVENSE_AIR ? 3 : 20;
         s->pub.motors[i].level = 0;
+        s->pub.motors[i].cap = 0;
         s->sent[i] = 0;
     }
     s->unsent = false;
+    s->pub.pattern = -1;
 }
 
 /* When DeviceType gets no answer: names like "LVS-Z36" carry the model's
@@ -253,9 +261,10 @@ static void motor_command(const slot_t *s, uint8_t i, uint8_t level, char *out, 
     }
 }
 
-/* Send the next level that has changed, if any. */
+/* Send every level that has changed, one after another. */
 static void send_levels(slot_t *s)
 {
+    bool all_sent = true;
     for (uint8_t i = 0; i < s->pub.motor_count; i++)
     {
         uint8_t level = s->pub.motors[i].level;
@@ -265,21 +274,51 @@ static void send_levels(slot_t *s)
         }
         char command[24];
         motor_command(s, i, level, command, sizeof(command));
-        if (send(s, command))
+        if (!send(s, command))
         {
-            if (s->model_info->style == STYLE_MULTI)
-            {
-                memcpy(s->sent, (uint8_t[]){ s->pub.motors[0].level, s->pub.motors[1].level,
-                                             s->pub.motors[2].level }, 3);
-            }
-            else
-            {
-                s->sent[i] = level;
-            }
+            all_sent = false;
+            continue;
         }
-        return;     // one command per gap
+        if (s->model_info->style == STYLE_MULTI)
+        {
+            // One command sets them all.
+            for (uint8_t j = 0; j < s->pub.motor_count; j++)
+            {
+                s->sent[j] = s->pub.motors[j].level;
+            }
+            break;
+        }
+        s->sent[i] = level;
     }
-    s->unsent = false;
+    s->unsent = !all_sent;
+}
+
+/* Work out each motor's level from the pattern playing (if any) and the
+ * reaction (if on), dt_ms after the last time. */
+static void run_drive(slot_t *s, uint32_t dt_ms)
+{
+    s->pattern_ms += dt_ms * speed / 100;
+    float factor = reactive ? reactive_factor : 1;
+    for (uint8_t i = 0; i < s->pub.motor_count; i++)
+    {
+        lovense_motor_t *m = &s->pub.motors[i];
+        float v = 1;
+        if (s->pub.pattern >= 0)
+        {
+            uint8_t which = 0;
+            for (uint8_t j = 0; j <= i; j++)
+            {
+                which += s->pub.motors[j].kind == m->kind;
+            }
+            v = patterns_level((size_t)s->pub.pattern, m->kind, which, i, s->pattern_ms);
+        }
+        uint8_t level = v < 0 ? 0 : (uint8_t)(v * factor * m->cap + 0.5f);
+        if (level != m->level)
+        {
+            m->level = level;
+            s->unsent = true;
+        }
+    }
 }
 
 /* Stop every motor straight away, ahead of disconnecting. */
@@ -289,6 +328,7 @@ static void send_stop(slot_t *s)
     {
         return;
     }
+    s->pub.pattern = -1;
     for (uint8_t i = 0; i < s->pub.motor_count; i++)
     {
         s->pub.motors[i].level = 0;
@@ -425,6 +465,7 @@ static void add_found_devices(void)
         free_slot->pub.model = free_slot->pub.name;
         free_slot->pub.state = LOVENSE_FOUND;
         free_slot->pub.battery = -1;
+        free_slot->pub.pattern = -1;
     }
 }
 
@@ -500,6 +541,7 @@ bool lovense_toggle(size_t slot)
         s->pub.state = LOVENSE_CONNECTING;
         s->pub.battery = -1;
         s->pub.motor_count = 0;
+        s->pub.pattern = -1;
         s->model_info = NULL;
         s->identify_tries = 0;
         s->stop_ms = 0;
@@ -515,19 +557,127 @@ void lovense_set_level(size_t slot, uint8_t motor, uint8_t level)
         return;
     }
     lovense_motor_t *m = &slots[slot].pub.motors[motor];
-    m->level = level > m->max ? m->max : level;
+    if (level > m->max)
+    {
+        level = m->max;
+    }
+    if (lovense_driven(&slots[slot].pub))
+    {
+        m->cap = level;     // the next poll scales the pattern or reaction to it
+        return;
+    }
+    m->level = level;
     slots[slot].unsent = true;
+}
+
+/* Caps for a pattern or reaction to drive up to: the level each motor was
+ * at, or three quarters of the way up if it was off. */
+static void start_caps(slot_t *s)
+{
+    for (uint8_t i = 0; i < s->pub.motor_count; i++)
+    {
+        lovense_motor_t *m = &s->pub.motors[i];
+        m->cap = m->level > 0 ? m->level : (uint8_t)((m->max * 3 + 3) / 4);
+    }
+}
+
+void lovense_play(size_t slot, int pattern)
+{
+    if (slot >= LOVENSE_MAX_DEVICES || !slots[slot].used || slots[slot].pub.state != LOVENSE_CONNECTED)
+    {
+        return;
+    }
+    slot_t *s = &slots[slot];
+    if (pattern < 0 || (size_t)pattern >= patterns_count())
+    {
+        // Stopped. With a reaction on, it carries on at the caps.
+        s->pub.pattern = -1;
+        if (!reactive)
+        {
+            for (uint8_t i = 0; i < s->pub.motor_count; i++)
+            {
+                s->pub.motors[i].level = 0;
+            }
+            s->unsent = true;
+        }
+        return;
+    }
+    if (!lovense_driven(&s->pub))
+    {
+        start_caps(s);
+    }
+    s->pub.pattern = pattern;
+    s->pattern_ms = 0;
+}
+
+void lovense_set_reactive(bool on)
+{
+    if (on == reactive)
+    {
+        return;
+    }
+    for (size_t i = 0; i < LOVENSE_MAX_DEVICES; i++)
+    {
+        slot_t *s = &slots[i];
+        if (!s->used || s->pub.state != LOVENSE_CONNECTED || s->pub.pattern >= 0)
+        {
+            continue;   // a pattern already has its caps
+        }
+        if (on)
+        {
+            start_caps(s);
+        }
+        else
+        {
+            for (uint8_t j = 0; j < s->pub.motor_count; j++)
+            {
+                s->pub.motors[j].level = s->pub.motors[j].cap;
+            }
+            s->unsent = true;
+        }
+    }
+    reactive = on;
+}
+
+bool lovense_reactive(void)
+{
+    return reactive;
+}
+
+void lovense_set_reactive_factor(float factor)
+{
+    reactive_factor = factor < 0 ? 0 : factor > 1 ? 1 : factor;
+}
+
+bool lovense_driven(const lovense_device_t *device)
+{
+    return device->pattern >= 0 || reactive;
+}
+
+void lovense_set_speed(uint16_t percent)
+{
+    speed = percent < 10 ? 10 : percent > 400 ? 400 : percent;
+}
+
+uint16_t lovense_speed(void)
+{
+    return speed;
 }
 
 void lovense_stop_all(void)
 {
     for (size_t i = 0; i < LOVENSE_MAX_DEVICES; i++)
     {
+        if (slots[i].used && slots[i].pub.pattern >= 0)
+        {
+            lovense_play(i, -1);
+        }
         for (uint8_t j = 0; slots[i].used && j < slots[i].pub.motor_count; j++)
         {
             lovense_set_level(i, j, 0);
         }
     }
+    lovense_set_reactive(false);    // the caps are 0 now, so the motors stay stopped
 }
 
 static void poll_device(slot_t *s)
@@ -575,6 +725,7 @@ static void poll_device(slot_t *s)
             s->link = -1;
             s->stop_ms = 0;
             s->pub.state = LOVENSE_LOST;
+            s->pub.pattern = -1;
             for (uint8_t i = 0; i < s->pub.motor_count; i++)
             {
                 s->pub.motors[i].level = 0;     // so it doesn't start up again on reconnecting
@@ -593,21 +744,27 @@ static void poll_device(slot_t *s)
             break;
         }
         read_replies(s);
+        if (lovense_driven(&s->pub))
+        {
+            run_drive(s, now - last_poll);
+        }
         if (now - s->last_send_ms < SEND_GAP_MS)
         {
             break;
         }
-        if (s->unsent)
-        {
-            send_levels(s);
-        }
-        else if (now - s->last_battery_ms >= BATTERY_EVERY_MS)
+        // The battery first when it's due, as a pattern keeps the levels
+        // changing.
+        if (now - s->last_battery_ms >= BATTERY_EVERY_MS)
         {
             if (send(s, "Battery;"))
             {
                 s->battery_asked = true;
                 s->last_battery_ms = now;
             }
+        }
+        else if (s->unsent)
+        {
+            send_levels(s);
         }
         break;
 
@@ -618,6 +775,7 @@ static void poll_device(slot_t *s)
 
 void lovense_poll(uint32_t now_ms)
 {
+    last_poll = now != 0 ? now : now_ms;
     now = now_ms;
     if (scanning)
     {
