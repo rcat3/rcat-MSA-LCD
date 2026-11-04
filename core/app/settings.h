@@ -29,6 +29,7 @@ typedef struct
     uint8_t lovense_release_to_zero;        // 1 to set a Lovense motor back to 0 when its ring is let go
     char remote_ssid[SETTINGS_REMOTE_LEN];      // the phone remote's hotspot; empty until it's first used
     char remote_password[SETTINGS_REMOTE_LEN];
+    uint8_t terminal_size;                  // Terminal letter size: 0 to fit the message, or 1 to 6 for 8 to 48 px
 } settings_t;
 
 /* Load the saved settings, or the defaults if nothing valid has been saved. */
@@ -50,5 +51,6 @@ void settings_set_sound_track(const char *name);
 void settings_set_voice_effect(uint8_t preset);
 void settings_set_lovense_release_to_zero(uint8_t enabled);
 void settings_set_remote(const char *ssid, const char *password);
+void settings_set_terminal_size(uint8_t size);
 
 #endif

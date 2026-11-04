@@ -17,7 +17,7 @@ const ui_feature_def_t feature_images = {
 
 static void add_image_page(ui_feature_t *feature, const media_item_t *pic)
 {
-    lv_obj_t *page = ui_feature_add_page(feature, true);
+    lv_obj_t *page = ui_feature_add_page(feature, pic->name, true);
     lv_obj_t *img;
 
     if (pic->is_gif)
@@ -59,7 +59,7 @@ static bool build(ui_feature_t *feature)
         add_image_page(feature, media_get(i));
     }
 
-    lv_obj_t *blank = ui_feature_add_page(feature, true);
+    lv_obj_t *blank = ui_feature_add_page(feature, "Blank", true);
     ui_add_startup_choice(feature, blank, "Blank", SETTINGS_STARTUP_BLANK);
     return true;
 }

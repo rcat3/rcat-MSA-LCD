@@ -59,7 +59,7 @@ static void ring_settings_event_cb(lv_event_t *e)
 
 static void add_ring_settings_page(ui_feature_t *feature)
 {
-    ring_page = ui_feature_add_page(feature, false);
+    ring_page = ui_feature_add_page(feature, "Voice Ring", false);
 
     lv_obj_t *title = lv_label_create(ring_page);
     lv_label_set_text(title, "Voice Ring");
@@ -102,7 +102,7 @@ static void effect_speaker_event_cb(lv_event_t *e)
 
 static void add_effect_page(ui_feature_t *feature)
 {
-    lv_obj_t *page = ui_feature_add_page(feature, false);
+    lv_obj_t *page = ui_feature_add_page(feature, "Voice Effect", false);
 
     lv_obj_t *title = lv_label_create(page);
     lv_label_set_text(title, "Voice Effect");
@@ -191,7 +191,7 @@ static void lab_switch_event_cb(lv_event_t *e)
 
 static void add_lab_page(ui_feature_t *feature)
 {
-    lv_obj_t *page = ui_feature_add_page(feature, false);
+    lv_obj_t *page = ui_feature_add_page(feature, "Voice Lab", false);
 
     lv_obj_t *title = lv_label_create(page);
     lv_label_set_text(title, "Voice Lab");
@@ -229,7 +229,7 @@ static bool build(ui_feature_t *feature)
     voice_ring_create();
 
     // Ways of showing the level. More styles can go here, one page each.
-    lv_obj_t *kitt_page = ui_feature_add_page(feature, true);
+    lv_obj_t *kitt_page = ui_feature_add_page(feature, "KITT", true);
     kitt_create(kitt_page);
     ui_add_startup_choice(feature, kitt_page, "KITT", SETTINGS_STARTUP_KITT);
 

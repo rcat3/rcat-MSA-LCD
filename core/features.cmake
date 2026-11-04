@@ -7,7 +7,7 @@
 # here, add it to the list in ui/ui.c, and add it to each platform's
 # features.cmake.
 
-set(RCAT_FEATURES IMAGES VOICE SOUND LEVEL LOVENSE)
+set(RCAT_FEATURES IMAGES VOICE SOUND LEVEL LOVENSE TERMINAL)
 
 # Leave the source files of switched off features out of the list in
 # sources_var.

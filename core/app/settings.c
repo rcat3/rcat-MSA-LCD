@@ -210,3 +210,9 @@ void settings_set_remote(const char *ssid, const char *password)
     current.remote_password[SETTINGS_REMOTE_LEN - 1] = '\0';
     schedule_save();
 }
+
+void settings_set_terminal_size(uint8_t size)
+{
+    current.terminal_size = size <= 6 ? size : 0;
+    schedule_save();
+}

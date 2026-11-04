@@ -22,6 +22,11 @@
  *     POST /api/scan?on=<1 or 0>
  *     POST /api/connect?d=<slot>      connect, or disconnect if connected
  *     POST /api/stop                  everything, as the Stop button
+ *     POST /api/show?f=<feature>&p=<page>     bring a page on screen
+ *     POST /api/message?append=<1 or 0>&show=<1 or 0>   the body (UTF-8) to
+ *                                     the Terminal feature, and show it there
+ *     POST /api/clear                 clear the Terminal
+ *     POST /api/termsize?s=<0 to fit, or 1 to 6 for 8 to 48 px>   its letter size
  *
  *   The POSTs answer with the state, so the page shows the change at once.
  *   Each request has its own connection ("Connection: close"), which keeps
@@ -33,6 +38,7 @@
 #include <string.h>
 
 #include "app/lovense.h"
+#include "app/message.h"
 #include "app/patterns.h"
 #include "app/reactive.h"
 #include "app/remote.h"
@@ -40,6 +46,7 @@
 #include "audio/voice_lab.h"
 #include "hal.h"
 #include "lvgl.h"
+#include "ui/ui.h"
 
 #if RCAT_HAVE_NETWORK
 
@@ -58,8 +65,8 @@
 #define DNS_PORT            53
 #endif
 #define MAX_CLIENTS         4
-#define REQUEST_MAX         1024
-#define BODY_MAX            3072
+#define REQUEST_MAX         2048        // headers and body
+#define BODY_MAX            4096
 #define CLIENT_TIMEOUT_MS   5000
 #define SCAN_MS             30000       // a search from the page runs this long
 #define MAX_KNOWN           8           // phones that have opened the page
@@ -75,6 +82,8 @@ typedef struct
     uint32_t addr;
     size_t in_len;
     char in[REQUEST_MAX + 1];
+    const char *request_body;   // within in, once the headers are all there
+    size_t request_body_len;
     bool responding;
     char head[256];
     size_t head_len;
@@ -388,6 +397,11 @@ static void write_state(json_t *j)
     jprintf(j, ",\"notice\":");
     jstring(j, notice != NULL ? notice : "");
     notice = NULL;
+    size_t feature, page;
+    ui_current(&feature, &page);
+    jprintf(j, ",\"screen\":[%u,%u],\"term_size\":%d,\"term_scale\":%d,\"message\":", (unsigned)feature,
+            (unsigned)page, settings_get()->terminal_size, message_scale());
+    jstring(j, message_text());
     jprintf(j, ",\"devices\":[");
     bool first = true;
     for (size_t i = 0; i < LOVENSE_MAX_DEVICES; i++)
@@ -435,7 +449,20 @@ static void write_info(json_t *j)
             first = false;
         }
     }
-    jprintf(j, "],\"max_connected\":%d}", LOVENSE_MAX_CONNECTED);
+    jprintf(j, "],\"max_connected\":%d,\"message_max\":%d,\"features\":[", LOVENSE_MAX_CONNECTED, MESSAGE_MAX);
+    for (size_t f = 0; f < ui_feature_count(); f++)
+    {
+        jprintf(j, "%s[", f ? "," : "");
+        jstring(j, ui_feature_name(f));
+        jprintf(j, ",[");
+        for (size_t p = 0; p < ui_page_count(f); p++)
+        {
+            jprintf(j, "%s", p ? "," : "");
+            jstring(j, ui_page_name(f, p));
+        }
+        jprintf(j, "]]");
+    }
+    jprintf(j, "]}");
 }
 
 /* ----- Requests ----- */
@@ -476,7 +503,20 @@ static int connected_count(void)
 }
 
 /* Carry out an API command. Returns false if there's no such command. */
-static bool run_command(const char *name, const char *query)
+/* The feature called name, or -1 */
+static int find_feature(const char *name)
+{
+    for (size_t f = 0; f < ui_feature_count(); f++)
+    {
+        if (strcmp(ui_feature_name(f), name) == 0)
+        {
+            return (int)f;
+        }
+    }
+    return -1;
+}
+
+static bool run_command(const char *name, const char *query, const char *body, size_t body_len)
 {
     if (strcmp(name, "level") == 0)
     {
@@ -567,6 +607,32 @@ static bool run_command(const char *name, const char *query)
         lovense_stop_all();
         reactive_set_mode(REACTIVE_OFF);
     }
+    else if (strcmp(name, "show") == 0)
+    {
+        int f = query_int(query, "f", -1), p = query_int(query, "p", 0);
+        if (f >= 0 && p >= 0)
+        {
+            ui_show((size_t)f, (size_t)p);
+        }
+    }
+    else if (strcmp(name, "message") == 0)
+    {
+        message_set(body, body_len, query_int(query, "append", 0) != 0);
+        int terminal = find_feature("Terminal");
+        if (query_int(query, "show", 1) && terminal >= 0)
+        {
+            ui_show((size_t)terminal, 0);
+        }
+    }
+    else if (strcmp(name, "clear") == 0)
+    {
+        message_clear();
+    }
+    else if (strcmp(name, "termsize") == 0)
+    {
+        int size = query_int(query, "s", 0);
+        settings_set_terminal_size((uint8_t)(size >= 0 && size <= 6 ? size : 0));
+    }
     else
     {
         return false;
@@ -627,6 +693,10 @@ static void header_value(const char *request, const char *name, char *out, size_
     for (const char *line = strstr(request, "\r\n"); line != NULL; line = strstr(line + 2, "\r\n"))
     {
         const char *h = line + 2;
+        if (h[0] == '\r' && h[1] == '\n')
+        {
+            return;     // the end of the headers
+        }
         if (strncasecmp(h, name, n) == 0 && h[n] == ':')
         {
             h += n + 1;
@@ -698,7 +768,7 @@ static void handle_request(client_t *c)
     {
         respond_json(c, write_state);
     }
-    else if (strncmp(target, "/api/", 5) == 0 && strcmp(method, "POST") == 0 && run_command(target + 5, query))
+    else if (strncmp(target, "/api/", 5) == 0 && strcmp(method, "POST") == 0 && run_command(target + 5, query, c->request_body, c->request_body_len))
     {
         respond_json(c, write_state);
     }
@@ -729,9 +799,28 @@ static void serve_client(client_t *c)
             c->in_len += (size_t)n;
             c->in[c->in_len] = '\0';
         }
-        if (strstr(c->in, "\r\n\r\n") != NULL)
+        const char *end = strstr(c->in, "\r\n\r\n");
+        if (end != NULL)
         {
-            handle_request(c);      // the API takes no body, so the headers are all of it
+            // Wait for the body too, if there is one
+            char length[16];
+            header_value(c->in, "Content-Length", length, sizeof(length));
+            size_t body_len = (size_t)strtoul(length, NULL, 10);
+            size_t head_len = (size_t)(end + 4 - c->in);
+            if (head_len + body_len > REQUEST_MAX)
+            {
+                respond(c, "413 Content Too Large", "text/plain", "", 0, NULL);
+            }
+            else if (c->in_len < head_len + body_len)
+            {
+                return;
+            }
+            else
+            {
+                c->request_body = c->in + head_len;
+                c->request_body_len = body_len;
+                handle_request(c);
+            }
         }
         else if (c->in_len >= REQUEST_MAX)
         {
@@ -801,6 +890,8 @@ static void accept_clients(void)
         c->in_len = 0;
         c->in[0] = '\0';
         c->responding = false;
+        c->request_body = NULL;
+        c->request_body_len = 0;
     }
 }
 

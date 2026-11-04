@@ -16,14 +16,12 @@
  *             speed is under the list.
  *   React:    drives the motors from your voice or your movement (see
  *             reactive.h), on top of any pattern.
- *   Remote:   (boards with WiFi) a hotspot with a page that controls it all
- *             from a phone (see remote.h), and a QR code for joining it.
  *   Options:  Motor Hold: on, a motor keeps its level when you let go of its
- *             knob; off, it goes back to 0. And a new password for the
- *             remote.
+ *             knob; off, it goes back to 0.
  *
  * The connections keep running while you look at other features, so the
- * levels stay as they were set.
+ * levels stay as they were set. Everything here can also be done from a
+ * phone, with the phone remote in Settings (see remote.h).
  */
 #include <stdio.h>
 #include <string.h>
@@ -31,7 +29,6 @@
 #include "app/lovense.h"
 #include "app/patterns.h"
 #include "app/reactive.h"
-#include "app/remote.h"
 #include "app/settings.h"
 #include "ui/ui_internal.h"
 
@@ -463,9 +460,9 @@ static lv_obj_t *add_live_ring(lv_obj_t *page, uint8_t index)
     return arc;
 }
 
-static lv_obj_t *add_dark_page(ui_feature_t *feature)
+static lv_obj_t *add_dark_page(ui_feature_t *feature, const char *name)
 {
-    lv_obj_t *page = ui_feature_add_page(feature, true);
+    lv_obj_t *page = ui_feature_add_page(feature, name, true);
     lv_obj_set_scrollable(page, false);
     lv_obj_set_style_text_color(page, lv_color_white(), 0);
     return page;
@@ -473,7 +470,7 @@ static lv_obj_t *add_dark_page(ui_feature_t *feature)
 
 static void add_control_page(ui_feature_t *feature)
 {
-    control_page = add_dark_page(feature);
+    control_page = add_dark_page(feature, "Control");
 
     for (uint8_t i = 0; i < LOVENSE_MAX_MOTORS; i++)
     {
@@ -675,7 +672,7 @@ static void speed_event_cb(lv_event_t *e)
 
 static void add_patterns_page(ui_feature_t *feature)
 {
-    patterns_page = add_dark_page(feature);
+    patterns_page = add_dark_page(feature, "Patterns");
 
     // Which device: at the top, with arrows to step through them
     target_label = lv_label_create(patterns_page);
@@ -803,7 +800,7 @@ static void react_row_event_cb(lv_event_t *e)
 
 static void add_react_page(ui_feature_t *feature)
 {
-    react_page = add_dark_page(feature);
+    react_page = add_dark_page(feature, "React");
 
     lv_obj_t *title = lv_label_create(react_page);
     lv_label_set_text(title, "React to");
@@ -847,123 +844,6 @@ static void add_react_page(ui_feature_t *feature)
     lv_label_set_text(react_status, "");
     lv_obj_set_style_text_color(react_status, COLOR_MUTED, 0);
     lv_obj_align(react_status, LV_ALIGN_CENTER, 0, ui_px(84));
-}
-
-/* ----- Remote page ----- */
-
-static lv_obj_t *remote_page;
-static lv_obj_t *remote_title;
-static lv_obj_t *remote_switch;
-static lv_obj_t *remote_qr;
-static lv_obj_t *remote_hint;
-static lv_obj_t *remote_name;
-static lv_obj_t *remote_pass;
-static int shown_phones = -1;
-static int shown_remote = -1;
-static char shown_join[80];
-
-static void show_remote(void)
-{
-    if (remote_page == NULL)
-    {
-        return;
-    }
-    bool on = remote_running();
-    if ((int)on != shown_remote)
-    {
-        shown_remote = on;
-        lv_obj_set_state(remote_switch, LV_STATE_CHECKED, on);
-        lv_obj_set_hidden(remote_qr, !on);
-        lv_obj_set_hidden(remote_name, !on);
-        lv_obj_set_hidden(remote_pass, !on);
-        lv_obj_set_hidden(remote_hint, on);
-        shown_phones = -1;
-    }
-    if (on && strcmp(remote_join_text(), shown_join) != 0)
-    {
-        // A new password, or the first time it's shown
-        snprintf(shown_join, sizeof(shown_join), "%s", remote_join_text());
-        lv_qrcode_update(remote_qr, shown_join, strlen(shown_join));
-        lv_label_set_text(remote_name, remote_ssid());
-        lv_label_set_text_fmt(remote_pass, "Password  %s", remote_password());
-    }
-    int phones = remote_phones();
-    if (phones != shown_phones)
-    {
-        shown_phones = phones;
-        if (!on)
-        {
-            lv_label_set_text(remote_title, "Phone Remote");
-        }
-        else if (phones == 0)
-        {
-            lv_label_set_text(remote_title, "Scan to join");
-        }
-        else
-        {
-            lv_label_set_text_fmt(remote_title, LV_SYMBOL_WIFI "  %d phone%s", phones, phones == 1 ? "" : "s");
-        }
-    }
-}
-
-static void remote_switch_event_cb(lv_event_t *e)
-{
-    bool on = lv_obj_has_state(remote_switch, LV_STATE_CHECKED);
-    if (on && !remote_start())
-    {
-        lv_label_set_text(remote_hint, "WiFi didn't start");
-    }
-    else if (!on)
-    {
-        remote_stop();
-    }
-    shown_remote = -1;
-    show_remote();
-}
-
-static void add_remote_page(ui_feature_t *feature)
-{
-    remote_page = add_dark_page(feature);
-
-    remote_title = lv_label_create(remote_page);
-    lv_label_set_text(remote_title, "Phone Remote");
-    lv_obj_set_style_text_color(remote_title, COLOR_MUTED, 0);
-    lv_obj_align(remote_title, LV_ALIGN_TOP_MID, 0, ui_px(28));
-
-    remote_switch = lv_switch_create(remote_page);
-    lv_obj_set_size(remote_switch, ui_px(64), ui_px(32));
-    lv_obj_set_style_bg_color(remote_switch, COLOR_TRACK, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(remote_switch, lv_palette_main(LV_PALETTE_PINK), LV_PART_INDICATOR | LV_STATE_CHECKED);
-    lv_obj_align(remote_switch, LV_ALIGN_CENTER, 0, ui_px(-58));
-    lv_obj_add_event_cb(remote_switch, remote_switch_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
-
-    // For a phone's camera: "join this network"
-    remote_qr = lv_qrcode_create(remote_page);
-    lv_qrcode_set_size(remote_qr, ui_px(92));
-    lv_qrcode_set_dark_color(remote_qr, lv_color_black());
-    lv_qrcode_set_light_color(remote_qr, lv_color_white());
-    lv_qrcode_set_quiet_zone(remote_qr, true);
-    lv_obj_align(remote_qr, LV_ALIGN_CENTER, 0, ui_px(8));
-    lv_obj_set_hidden(remote_qr, true);
-
-    remote_hint = lv_label_create(remote_page);
-    lv_label_set_text(remote_hint, "Control it all\nfrom a phone");
-    lv_obj_set_style_text_align(remote_hint, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(remote_hint, COLOR_MUTED, 0);
-    lv_obj_align(remote_hint, LV_ALIGN_CENTER, 0, ui_px(14));
-
-    remote_name = lv_label_create(remote_page);
-    lv_label_set_text(remote_name, "");
-    lv_obj_align(remote_name, LV_ALIGN_CENTER, 0, ui_px(66));
-    lv_obj_set_hidden(remote_name, true);
-
-    remote_pass = lv_label_create(remote_page);
-    lv_label_set_text(remote_pass, "");
-    lv_obj_set_style_text_color(remote_pass, COLOR_MUTED, 0);
-    lv_obj_align(remote_pass, LV_ALIGN_CENTER, 0, ui_px(84));
-    lv_obj_set_hidden(remote_pass, true);
-
-    show_remote();
 }
 
 /* ----- Devices page ----- */
@@ -1067,7 +947,7 @@ static void device_row_event_cb(lv_event_t *e)
 
 static void add_devices_page(ui_feature_t *feature)
 {
-    devices_page = add_dark_page(feature);
+    devices_page = add_dark_page(feature, "Devices");
 
     lv_obj_t *title = lv_label_create(devices_page);
     lv_label_set_text(title, "Devices");
@@ -1118,21 +998,13 @@ static void hold_event_cb(lv_event_t *e)
     settings_set_lovense_release_to_zero(!hold);
 }
 
-static void new_password_event_cb(lv_event_t *e)
-{
-    remote_new_password();
-    show_remote();
-}
-
 static void add_options_page(ui_feature_t *feature)
 {
-    lv_obj_t *page = add_dark_page(feature);
-    bool remote = remote_available();
-    int32_t shift = remote ? ui_px(-22) : 0;     // up a little, to make room for the button
+    lv_obj_t *page = add_dark_page(feature, "Options");
 
     lv_obj_t *label = lv_label_create(page);
     lv_label_set_text(label, "Motor Hold");
-    lv_obj_align(label, LV_ALIGN_CENTER, 0, ui_px(-34) + shift);
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, ui_px(-34));
 
     lv_obj_t *hold_switch = lv_switch_create(page);
     lv_obj_set_size(hold_switch, ui_px(96), ui_px(48));
@@ -1142,26 +1014,8 @@ static void add_options_page(ui_feature_t *feature)
     {
         lv_obj_add_state(hold_switch, LV_STATE_CHECKED);
     }
-    lv_obj_align(hold_switch, LV_ALIGN_CENTER, 0, ui_px(12) + shift);
+    lv_obj_align(hold_switch, LV_ALIGN_CENTER, 0, ui_px(12));
     lv_obj_add_event_cb(hold_switch, hold_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
-
-    if (remote)
-    {
-        // Shuts out phones that had the old one
-        lv_obj_t *button = lv_button_create(page);
-        lv_obj_set_size(button, ui_px(150), ui_px(32));
-        lv_obj_set_style_radius(button, LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_bg_color(button, COLOR_SURFACE, 0);
-        lv_obj_set_style_bg_color(button, COLOR_OUTLINE, LV_STATE_PRESSED);
-        lv_obj_set_style_border_width(button, LV_MAX(1, ui_px(1)), 0);
-        lv_obj_set_style_border_color(button, COLOR_OUTLINE, 0);
-        lv_obj_set_style_shadow_width(button, 0, 0);
-        lv_obj_align(button, LV_ALIGN_CENTER, 0, ui_px(68));
-        lv_obj_add_event_cb(button, new_password_event_cb, LV_EVENT_CLICKED, NULL);
-        lv_obj_t *text = lv_label_create(button);
-        lv_label_set_text(text, "New remote password");
-        lv_obj_center(text);
-    }
 }
 
 /* ----- Running it ----- */
@@ -1174,7 +1028,6 @@ static void poll_timer_cb(lv_timer_t *t)
         lovense_set_reactive_factor(reactive_poll(now));
     }
     lovense_poll(now);
-    remote_poll(now);
     lv_obj_t *page = ui_current_page();
     if (page == control_page)
     {
@@ -1191,10 +1044,6 @@ static void poll_timer_cb(lv_timer_t *t)
     else if (page == devices_page)
     {
         show_devices();
-    }
-    else if (page != NULL && page == remote_page)
-    {
-        show_remote();
     }
 }
 
@@ -1231,10 +1080,6 @@ static bool build(ui_feature_t *feature)
     add_devices_page(feature);
     add_patterns_page(feature);
     add_react_page(feature);
-    if (remote_available())
-    {
-        add_remote_page(feature);
-    }
     add_options_page(feature);
     show_control();
     lv_timer_create(poll_timer_cb, POLL_MS, NULL);

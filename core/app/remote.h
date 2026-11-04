@@ -2,9 +2,10 @@
 #define RCAT_REMOTE_H
 
 /*
- * Phone remote for the Lovense feature: the board runs a WiFi hotspot of its
- * own, and a phone that joins it gets a web page with the same controls as
- * the screen: the devices, their motors, patterns, reactions and Stop.
+ * Phone remote: the board runs a WiFi hotspot of its own, and a phone that
+ * joins it gets a web page that runs the display: which page it shows, the
+ * Lovense devices (their motors, patterns, reactions and Stop), and messages
+ * for the Terminal. It's switched on in Settings.
  *
  * Joining is meant to be easy: the screen shows a QR code that a phone's
  * camera turns into "join this network", and once it's joined, the phone

@@ -6,6 +6,7 @@ set(RCAT_FEATURE_VOICE  ON)     # microphone level displays, voice effects and t
 set(RCAT_FEATURE_SOUND  ON)     # sound file player
 set(RCAT_FEATURE_LEVEL  ON)     # spirit level, for lining the display up on the mask
 set(RCAT_FEATURE_LOVENSE ON)    # controls a Lovense device over Bluetooth
+set(RCAT_FEATURE_TERMINAL ON)   # green screen text, typed in on the Lovense feature's phone remote
 
 # Where the sound goes: BUILT_IN for the board's own speaker, or EXTERNAL for
 # amplifiers wired to its expansion header (see hardware/enclosure/README.md).

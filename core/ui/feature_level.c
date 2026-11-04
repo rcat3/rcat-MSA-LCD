@@ -122,7 +122,7 @@ static bool build(ui_feature_t *feature)
     up_x = x;
     up_y = y;
 
-    level_page = ui_feature_add_page(feature, true);
+    level_page = ui_feature_add_page(feature, "Level", true);
     lv_obj_set_scrollable(level_page, false);
 
     // Marks at each side show where the line sits when the screen is level.

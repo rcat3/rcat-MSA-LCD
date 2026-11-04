@@ -117,7 +117,7 @@ static lv_obj_t *add_button(lv_obj_t *page, const char *symbol, int32_t size, in
 
 static void add_player_page(ui_feature_t *feature)
 {
-    lv_obj_t *page = ui_feature_add_page(feature, false);
+    lv_obj_t *page = ui_feature_add_page(feature, "Player", false);
 
     lv_obj_t *title = lv_label_create(page);
     lv_label_set_text(title, "Sound");
@@ -187,7 +187,7 @@ static void autoplay_event_cb(lv_event_t *e)
 
 static void add_options_page(ui_feature_t *feature)
 {
-    lv_obj_t *page = ui_feature_add_page(feature, false);
+    lv_obj_t *page = ui_feature_add_page(feature, "Options", false);
 
     lv_obj_t *volume_label = lv_label_create(page);
     lv_label_set_text(volume_label, "Volume");

@@ -44,6 +44,7 @@ extern const ui_feature_def_t feature_voice;
 extern const ui_feature_def_t feature_sound;
 extern const ui_feature_def_t feature_level;
 extern const ui_feature_def_t feature_lovense;
+extern const ui_feature_def_t feature_terminal;
 extern const ui_feature_def_t feature_settings;
 
 static const ui_feature_def_t *const feature_defs[] = {
@@ -61,6 +62,9 @@ static const ui_feature_def_t *const feature_defs[] = {
 #endif
 #if RCAT_FEATURE_LOVENSE
     &feature_lovense,
+#endif
+#if RCAT_FEATURE_TERMINAL
+    &feature_terminal,
 #endif
     &feature_settings,   // last, so it can list every feature's startup choices
 };
@@ -123,6 +127,7 @@ void ui_init(void)
         feature->row = lv_tileview_add_tile(features_view, 0, feature_count, LV_DIR_VER);
         feature->pages = lv_tileview_create(feature->row);
         lv_obj_set_scrollbar_mode(feature->pages, LV_SCROLLBAR_MODE_OFF);
+        lv_obj_set_style_bg_color(feature->pages, lv_color_black(), 0);     // the dark theme's is grey
         lv_obj_add_event_cb(feature->pages, navigate_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
         feature->page_count = 0;
 
@@ -143,7 +148,8 @@ void ui_init(void)
 }
 
 /********************************************************************************
-function:	Scale the theme (font, padding) to the screen size
+function:	The theme: dark, with pink controls, scaled (font, padding) to the
+            screen size
 parameter:
 ********************************************************************************/
 static void setup_theme(void)
@@ -152,13 +158,12 @@ static void setup_theme(void)
     screen_size = LV_MIN(lv_display_get_horizontal_resolution(disp),
                          lv_display_get_vertical_resolution(disp));
 
-    if (screen_size == DESIGN_SIZE)
+    // The theme sizes its padding and knobs from the DPI. The defaults are
+    // what the layout was designed with.
+    if (screen_size != DESIGN_SIZE)
     {
-        return;     // the defaults are what the layout was designed with
+        lv_display_set_dpi(disp, ui_px(LV_DPI_DEF));
     }
-
-    // The theme sizes its padding and knobs from the DPI.
-    lv_display_set_dpi(disp, ui_px(LV_DPI_DEF));
 
     const lv_font_t *font = LV_FONT_DEFAULT;
 #if LV_FONT_MONTSERRAT_24
@@ -167,15 +172,16 @@ static void setup_theme(void)
         font = &lv_font_montserrat_24;
     }
 #endif
-    lv_theme_t *theme = lv_theme_default_init(disp, lv_palette_main(LV_PALETTE_BLUE),
-                                              lv_palette_main(LV_PALETTE_RED),
-                                              false, font);
+    lv_theme_t *theme = lv_theme_default_init(disp, lv_palette_main(LV_PALETTE_PINK),
+                                              lv_palette_main(LV_PALETTE_PURPLE),
+                                              true, font);
     lv_display_set_theme(disp, theme);
 }
 
-lv_obj_t *ui_feature_add_page(ui_feature_t *feature, bool black)
+lv_obj_t *ui_feature_add_page(ui_feature_t *feature, const char *name, bool black)
 {
     lv_obj_t *page = lv_tileview_add_tile(feature->pages, feature->page_count++, 0, LV_DIR_HOR);
+    lv_obj_set_user_data(page, (void *)name);
     if (black)
     {
         lv_obj_set_style_bg_color(page, lv_color_black(), 0);
@@ -200,6 +206,58 @@ lv_obj_t *ui_current_page(void)
         }
     }
     return NULL;
+}
+
+size_t ui_feature_count(void)
+{
+    return feature_count;
+}
+
+const char *ui_feature_name(size_t feature)
+{
+    return feature < feature_count ? features[feature].def->name : "";
+}
+
+size_t ui_page_count(size_t feature)
+{
+    return feature < feature_count ? features[feature].page_count : 0;
+}
+
+const char *ui_page_name(size_t feature, size_t page)
+{
+    if (page >= ui_page_count(feature))
+    {
+        return "";
+    }
+    const char *name = lv_obj_get_user_data(lv_obj_get_child(features[feature].pages, (int32_t)page));
+    return name != NULL ? name : "";
+}
+
+void ui_current(size_t *feature, size_t *page)
+{
+    *feature = 0;
+    *page = 0;
+    lv_obj_t *row = lv_tileview_get_tile_active(features_view);
+    for (uint8_t i = 0; i < feature_count; i++)
+    {
+        if (features[i].row == row)
+        {
+            *feature = i;
+            *page = (size_t)lv_obj_get_index(lv_tileview_get_tile_active(features[i].pages));
+        }
+    }
+}
+
+void ui_show(size_t feature, size_t page)
+{
+    if (page >= ui_page_count(feature))
+    {
+        return;
+    }
+    lv_tileview_set_tile(features_view, features[feature].row, LV_ANIM_OFF);
+    lv_tileview_set_tile(features[feature].pages, lv_obj_get_child(features[feature].pages, (int32_t)page),
+                         LV_ANIM_OFF);
+    navigate_event_cb(NULL);    // as a swipe would
 }
 
 void ui_add_startup_choice(ui_feature_t *feature, lv_obj_t *page, const char *label, const char *value)

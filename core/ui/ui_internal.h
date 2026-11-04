@@ -33,9 +33,10 @@ typedef struct
 /* Scale a size or offset from the 240x240 design to this screen. */
 int32_t ui_px(int32_t design_px);
 
-/* Add a page to the end of a feature. black gives it a black background, for
- * pages that show images or effects rather than controls. */
-lv_obj_t *ui_feature_add_page(ui_feature_t *feature, bool black);
+/* Add a page to the end of a feature. name is what the phone remote lists it
+ * as, and must stay valid for as long as the UI exists. black gives it a black
+ * background, for pages that show images or effects rather than controls. */
+lv_obj_t *ui_feature_add_page(ui_feature_t *feature, const char *name, bool black);
 
 /* The feature and page currently on screen. */
 bool ui_feature_is_current(const ui_feature_t *feature);
