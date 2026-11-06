@@ -19,9 +19,9 @@ __pycache__/
 # ESP-IDF downloaded components
 managed_components/
 
-# Rendered enclosure parts (made from the .scad files)
-hardware/enclosure/*.stl
-hardware/enclosure/stl/
+# Rendered housing parts (made from the .scad files)
+hardware/boards/*/*.stl
+hardware/boards/*/stl/
 
 # KiCad local settings and backups
 *.kicad_prl

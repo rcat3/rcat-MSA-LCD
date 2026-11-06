@@ -42,21 +42,22 @@
 // The board is turned a quarter turn from its usual way up, so its buttons
 // are at the top, clear of the pods. The firmware turns the picture to match.
 //
-// The board's dimensions and the thread are in msa_1_46_board.scad, and the
-// coordinates are the same: the front of the glass is at z = 0 and the body
-// extends towards -z.
+// The board's dimensions are in board.scad, and the coordinates are the
+// same: the front of the glass is at z = 0 and the body extends towards -z.
+// The thread and the collar are in hardware/masks/msa_millennium.
 //
 // Render a part to print with, for example:
-//   openscad -D 'part="body"' -o body.stl msa_1_46_speaker_housing.scad
+//   openscad -D 'part="body"' -o body.stl msa_speaker_housing.scad
 
 part = "preview";           // "preview", "body", "back", "collar", "washer", "gasket", "plungers", "plunger_test",
                             // "spacers", "pod_test" or "layout"
 
-include <msa_1_46_board.scad>
-include <msa_1_46_header_adapter.scad>
+include <board.scad>
+include <header_adapter/header_adapter.scad>
+include <../../masks/msa_millennium/turning_collar.scad>
 
 // The wiring connects to the board's pin header through the PCB in
-// msa_1_46_header_adapter.scad, which is soldered onto it. Its socket faces
+// header_adapter/header_adapter.scad, which is soldered onto it. Its socket faces
 // the bottom, so the plug goes in from the space below the battery, between
 // the lower cover screws. Set this false for a ribbon cable's plug instead.
 header_adapter = true;
@@ -146,19 +147,8 @@ screw_clear = 2.3;
 screw_head = [4.2, 2.1];    // counterbore for an M2 socket head (3.8 x 2.0): diameter, depth
 boss_r = 3.2;
 
-/* [Collar] */
-collar_r = 34;              // the knurled grip, a little bigger than the body around the display
-                            // so it can be turned from above and below
-collar_t = 3.5;             // the grip, which is held between the gasket and the washer
-collar_bore = 20.3;         // the grip's bore, around the posts
-collar_clear = 0.3;
-gasket_t = 0.5;             // the gap the gasket is squeezed into
-gasket = [20.8, 33.0, 1.0]; // inner and outer radius, thickness
-post_r = 17.7;              // the posts on the back are this far from the center
-post_d = 4.6;               // thick enough that the washer's screws don't split them
+/* [Collar: the rest of its settings are in turning_collar.scad] */
 post_angles = [45, 135, 225, 315];  // clear of the opening for the microphone at the bottom
-washer = [15.0, 22.2, 2.0]; // inner and outer radius, thickness
-washer_arc = 130;           // each half spans this many degrees, so it fits through the thread
 
 $fn = 96;
 
@@ -212,18 +202,6 @@ module pod_2d()
     translate([0, -spk_wire_notch[1] / 2]) rounded_rect([pod_size[1], pod_size[0]], pod_corner);
 }
 
-module rounded_rect(size, r)
-{
-    offset(r = r) square(size - [2, 2] * r, center = true);
-}
-
-module stadium(size)
-{
-    hull()
-        for (s = [-1, 1])
-            translate([s * (size[0] - size[1]) / 2, 0]) circle(d = size[1], $fn = 64);
-}
-
 module battery_2d(grow = 0)
 {
     translate(battery_xy) rotate(battery_rot)
@@ -259,37 +237,6 @@ module chamber_2d()
 module rebate_2d()
 {
     offset(delta = cover_lip) offset(delta = -body_wall) outline_2d();
-}
-
-// Extrudes a 2D outline from z0 to z1 with its back edge chamfered by c and
-// its front edge rounded with radius r, in steps.
-module rounded_prism(z0, z1, c, r)
-{
-    steps = 8;
-    s = r / steps;
-    chamfered_prism(z0, z1 - r + 0.01, c, front = false) children();
-    for (i = [0 : steps - 1])
-    {
-        d = r - i * s;                  // how far below the front the slice ends
-        translate([0, 0, z1 - d]) linear_extrude(s + (i < steps - 1 ? 0.01 : 0))
-            offset(delta = -(r - sqrt(r * r - pow(r - (d - s), 2)))) children();
-    }
-}
-
-// Extrudes a 2D outline from z0 to z1 with its edges chamfered by c.
-module chamfered_prism(z0, z1, c, front = true)
-{
-    steps = 4;
-    s = c / steps;
-    translate([0, 0, z0 + c]) linear_extrude(z1 - z0 - 2 * c) children();
-    for (i = [0 : steps - 1])
-    {
-        inset = c - i * s;
-        translate([0, 0, z0 + i * s]) linear_extrude(s + 0.01) offset(delta = -inset) children();
-        if (front)
-            translate([0, 0, z1 - (i + 1) * s - 0.01]) linear_extrude(s + 0.01) offset(delta = -inset) children();
-    }
-    if (!front) translate([0, 0, z1 - c]) linear_extrude(c) children();
 }
 
 // The rest of this is in a pod's coordinates, with the speaker's long side
@@ -467,80 +414,7 @@ module back()
         for (s = cover_screws) translate(s) screw_cut();
         at_board_holes() screw_cut();
     }
-    // The posts the collar turns on, with pilot holes for the washer's screws
-    for (a = post_angles)
-        rotate([0, 0, a]) translate([post_r, 0, z_grip])
-            difference()
-            {
-                cylinder(d = post_d, h = z_back - z_grip + 0.01, $fn = 32);
-                translate([0, 0, -0.01]) cylinder(d = screw_pilot, h = 5, $fn = 16);
-            }
-}
-
-module at_posts()
-{
-    for (a = post_angles) rotate([0, 0, a]) translate([post_r, 0, 0]) children();
-}
-
-// The thread, with a knurled grip on its front end. Behind the grip, the
-// bore is wider for the washer and its screw heads.
-module collar()
-{
-    pocket_r = washer[1] + collar_clear;
-    pocket_d = washer[2] + 0.3;
-    bore_r = 21 * thread_scale;
-    difference()
-    {
-        union()
-        {
-            translate([0, 0, z_grip])
-                linear_extrude(collar_t)
-                    difference()
-                    {
-                        circle(r = collar_r, $fn = 192);
-                        for (i = [0 : 47]) rotate(i * 360 / 48) translate([collar_r + 0.4, 0]) circle(r = 1.2, $fn = 16);
-                    }
-            translate([0, 0, z_grip + 0.1]) rotate([180, 0, 0]) vpu_thread(thread_scale);
-        }
-        translate([0, 0, z_grip - 10]) cylinder(r = collar_bore, h = collar_t + 11, $fn = 128);
-        translate([0, 0, z_grip - pocket_d]) cylinder(r = pocket_r, h = pocket_d + 0.01, $fn = 128);
-        // Sloped, so it prints without support
-        translate([0, 0, z_grip - pocket_d - (pocket_r - bore_r) + 0.01])
-            cylinder(r1 = bore_r - 0.01, r2 = pocket_r, h = pocket_r - bore_r, $fn = 128);
-    }
-}
-
-module washer()
-{
-    translate([0, 0, z_grip - washer[2]]) for (a = [90, 270]) rotate([0, 0, a]) washer_half();
-}
-
-// Half of the washer, centered on +x, with holes for the two posts either
-// side of it
-module washer_half()
-{
-    difference()
-    {
-        intersection()
-        {
-            cylinder(r = washer[1], h = washer[2], $fn = 128);
-            linear_extrude(washer[2])
-                polygon(concat([[0, 0]], [for (t = [-washer_arc / 2 : 5 : washer_arc / 2]) 2 * washer[1] * [cos(t), sin(t)]]));
-        }
-        translate([0, 0, -1]) cylinder(r = washer[0], h = washer[2] + 2, $fn = 128);
-        for (a = post_angles)
-            if (abs(a - 90) < washer_arc / 2)
-                rotate([0, 0, a - 90]) translate([post_r, 0, -1]) cylinder(d = screw_clear, h = washer[2] + 2, $fn = 16);
-    }
-}
-
-module gasket()
-{
-    difference()
-    {
-        cylinder(r = gasket[1], h = gasket[2], $fn = 192);
-        translate([0, 0, -1]) cylinder(r = gasket[0], h = gasket[2] + 2, $fn = 192);
-    }
+    collar_posts();
 }
 
 // One pod on its own, to try the speaker's fit and how it sounds
@@ -601,8 +475,8 @@ else if (part == "spacers") spacers();
 else if (part == "plungers") for (i = [0, 1]) translate([i * 8, 0, 0]) plunger();
 else if (part == "plunger_test")
     for (i = [0 : len(plunger_test) - 1], j = [0, 1]) translate([i * 8, j * 8, 0]) plunger(plunger_test[i]);
-else if (part == "collar") rotate([180, 0, 0]) translate([0, 0, -z_grip - collar_t]) collar();
-else if (part == "washer") for (i = [0, 1]) translate([0, i * 18, 0]) rotate([0, 0, 90]) washer_half();
+else if (part == "collar") collar_print();
+else if (part == "washer") washer_print();
 else if (part == "gasket") gasket();
 else if (part == "pod_test") translate([0, 0, -z_spk_back + 2]) pod_test();
 else if (part == "back") rotate([180, 0, 0]) translate([0, 0, -z_back - cover_t]) back();

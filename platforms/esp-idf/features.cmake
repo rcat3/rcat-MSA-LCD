@@ -9,5 +9,6 @@ set(RCAT_FEATURE_LOVENSE ON)    # controls a Lovense device over Bluetooth
 set(RCAT_FEATURE_TERMINAL ON)   # green screen text, typed in on the Lovense feature's phone remote
 
 # Where the sound goes: BUILT_IN for the board's own speaker, or EXTERNAL for
-# amplifiers wired to its expansion header (see hardware/enclosure/README.md).
+# amplifiers wired to its expansion header (see
+# hardware/boards/waveshare_esp32s3_touch_lcd_1_46/README.md).
 set(RCAT_SPEAKER EXTERNAL)

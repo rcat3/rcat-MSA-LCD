@@ -1,5 +1,6 @@
-// The Waveshare ESP32-S3-Touch-LCD-1.46 (the version with the cover glass)
-// and the MSA voice port thread, shared by the housings in this folder.
+// The Waveshare ESP32-S3-Touch-LCD-1.46 (the version with the cover glass),
+// shared by the housings in this folder. The MSA voice port thread is in
+// hardware/masks/msa_millennium.
 //
 // Coordinates follow Waveshare's STEP model of the board: the front of the
 // glass is at z = 0, the board extends towards -z, and x/y are as seen from
@@ -9,9 +10,8 @@
 // tabs below are cut into its wall, and the back plate the board screws to
 // runs from plate_back to plate_front.
 
-thread_scale = 0.997;       // scales the thread's diameter. From the test rings: 99.7% fits best
-                            // (98% is too loose, 102% doesn't fit)
-thread_lead_in = [1.5, 1.2];  // bevel on the start of the thread (length, depth) to help it catch
+include <../../common/shapes.scad>
+include <../../masks/msa_millennium/voice_port.scad>
 
 /* [Board: Waveshare ESP32-S3-Touch-LCD-1.46 with cover] */
 lens_d = 44.77;                     // cover glass
@@ -52,7 +52,7 @@ header_plug = [16.9, 3.1, 4.1];    // a ribbon cable's plug: length with the cli
 header_plug_side = 1;               // the notch faces the center of the board (1) or away from it (-1)
 header_plug_clear = 0.3;
 header_adapter = false;             // a small PCB soldered onto the header in place of a ribbon cable
-                                    // (msa_1_46_header_adapter.scad, which has to be included too)
+                                    // (header_adapter/header_adapter.scad, which has to be included too)
 usb_access = false;                 // the wall covers the USB-C port, so a battery can't be charged
                                     // at the board's 2 A by accident. Take the board out to use USB
 usb_opening = [12.4, 6.6];          // width, height of the slot for the USB-C plug. The port sits
@@ -71,35 +71,6 @@ cup_or = cup_ir + wall;
 cup_top = rim_above_glass;
 plate_front = standoff_back_z;
 plate_back = plate_front - plate_t;
-
-function box_center(b) = [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2];
-function box_size(b) = [b[1][0] - b[0][0], b[1][1] - b[0][1]];
-
-module slab(b, z0, z1, grow = 0)
-{
-    translate([b[0][0] - grow, b[0][1] - grow, z0])
-        cube([box_size(b)[0] + 2 * grow, box_size(b)[1] + 2 * grow, z1 - z0]);
-}
-
-// The MSA thread from the 1.28" design. vendor/vpu_thread.stl has had the
-// original's inner lip removed so the inside is a plain 42 mm bore. Its front
-// face is at z = 0 and it screws into the mask from the z = 8 end, which gets
-// a bevel so the thread catches more easily.
-module vpu_thread(s)
-{
-    thread_r = 26 * s;
-    difference()
-    {
-        scale([s, s, 1]) import("vendor/vpu_thread.stl", convexity = 10);
-        translate([0, 0, 8 - thread_lead_in[0]])
-            difference()
-            {
-                cylinder(r = thread_r + 2, h = thread_lead_in[0] + 1);
-                translate([0, 0, -0.01])
-                    cylinder(r1 = thread_r + 0.01, r2 = thread_r - thread_lead_in[1], h = thread_lead_in[0] + 0.02);
-            }
-    }
-}
 
 // The thread on the back of the housing, front face against the back plate.
 // It's turned over with a rotation, not a mirror, which would reverse it.

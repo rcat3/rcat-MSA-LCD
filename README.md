@@ -62,7 +62,7 @@ The KITT bars and the voice ring adjust to the surroundings on their own.  A qui
 - **WiFi:** used by the Voice Lab and the Phone Remote, only while one of them is switched on.  They can't both run at once: switching one on stops the other.
 - **Bluetooth:** used by the Lovense feature.  It starts the first time you tap Connect.
 - **Not used yet:** the clock chip.
-- **Housing:** there's a 3D printable housing for this board, and a travel case for it, in [`hardware/`](hardware/enclosure/).
+- **Housing:** there's a 3D printable housing for this board, and a travel case for it, in [`hardware/boards/waveshare_esp32s3_touch_lcd_1_46`](hardware/boards/waveshare_esp32s3_touch_lcd_1_46/).  See [`hardware/`](hardware/) for what fits which board.
 
 ## Software
 
@@ -183,7 +183,7 @@ Set a feature to `OFF` to leave it out, or `ON` to build it in, then build as us
 
 A feature that needs hardware the board doesn't have (a microphone, a speaker, an accelerometer) hides itself even when it's built in.  The level is off for the RP2040/RP2350 boards, because their accelerometer isn't supported yet.
 
-The ESP32 file also sets `RCAT_SPEAKER`, where the sound goes: `BUILT_IN` for the board's own speaker, or `EXTERNAL` for amplifiers wired to its expansion header, as in the [speaker housing](hardware/enclosure/README.md#speaker-housing).
+The ESP32 file also sets `RCAT_SPEAKER`, where the sound goes: `BUILT_IN` for the board's own speaker, or `EXTERNAL` for amplifiers wired to its expansion header, as in the [speaker housing](hardware/boards/waveshare_esp32s3_touch_lcd_1_46/README.md#speaker-housing).
 
 ## Adding or Changing Images
 

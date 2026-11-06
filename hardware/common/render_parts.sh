@@ -1,20 +1,16 @@
-#!/usr/bin/env bash
+# Renders the parts of an OpenSCAD design to STL files, in parallel. Each
+# board folder's render.sh sets these and then sources this file:
 #
-# Render the speaker housing's parts to STL files for printing.
+#   SCAD        the design, relative to the board folder
+#   ALL_PARTS   every part it can render, as an array of `part` values
+#   OUT         where the STL files go (default: stl)
 #
-#   ./render.sh                 every part, including the test prints
-#   ./render.sh body back       just these parts
-#
-# The files go in the stl/ folder next to this script. Parts render in
-# parallel, and the body and collar take the longest, around a minute.
+# and passes its own arguments on, so `./render.sh body back` renders just
+# those parts and `./render.sh` renders all of them.
 
 set -euo pipefail
 
-cd "$(dirname "$0")"
-
-SCAD=msa_1_46_speaker_housing.scad
-OUT=stl
-ALL_PARTS=(body back collar washer gasket plungers spacers pod_test plunger_test)
+OUT=${OUT:-stl}
 
 if ! command -v openscad >/dev/null; then
     echo "OpenSCAD isn't installed. Get it from https://openscad.org/" >&2

@@ -1,6 +1,6 @@
 # J9 header adapter
 
-A small PCB that solders onto the 2x10, 1.27 mm pin header (J9) on the back of the Waveshare ESP32-S3-Touch-LCD-1.46. It replaces the ribbon cable in the speaker housing (`hardware/enclosure/msa_1_46_speaker_housing.scad`). All the wiring to the back of the housing plugs into one 10-pin JST SH socket on it. To take the board out for a firmware update, you unplug that socket and the battery, and nothing has to be cut or desoldered.
+A small PCB that solders onto the 2x10, 1.27 mm pin header (J9) on the back of the Waveshare ESP32-S3-Touch-LCD-1.46. It replaces the ribbon cable in the speaker housing (`../msa_speaker_housing.scad`). All the wiring to the back of the housing plugs into one 10-pin JST SH socket on it. To take the board out for a firmware update, you unplug that socket and the battery, and nothing has to be cut or desoldered.
 
 **Status: not built yet.**  The layout passes KiCad's design rules check. It hasn't been fitted.
 
@@ -58,4 +58,4 @@ Before soldering, make sure nothing else on the back of the board, inside the ad
 
 ## In the housing
 
-`header_adapter = true` in `msa_1_46_speaker_housing.scad` (the default) cuts the back plate to the adapter's outline and adds a notch for the plug, so a body printed before the adapter needs reprinting.  The plug goes in from the space below the battery.  The adapter's 3D model is in `hardware/enclosure/msa_1_46_header_adapter.scad`.
+`header_adapter = true` in `msa_speaker_housing.scad` (the default) cuts the back plate to the adapter's outline and adds a notch for the plug, so a body printed before the adapter needs reprinting.  The plug goes in from the space below the battery.  The adapter's 3D model is `header_adapter.scad` in this folder.

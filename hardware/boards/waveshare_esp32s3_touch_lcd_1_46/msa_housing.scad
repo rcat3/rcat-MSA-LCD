@@ -6,14 +6,15 @@
 // the thread holds the battery and power switch, like the 1.28" design this
 // is based on (see README.md for credits and license).
 //
-// The board's dimensions and the thread are in msa_1_46_board.scad.
+// The board's dimensions are in board.scad, and the thread is in
+// hardware/masks/msa_millennium.
 //
-// Render the part to print with:  openscad -o housing.stl msa_1_46_housing.scad
+// Render the part to print with:  openscad -o housing.stl msa_housing.scad
 // Set `part` to "lens_fit" or "thread_test" for the quick test prints.
 
 part = "housing";           // "housing", "fit_test", "lens_fit" or "thread_test"
 
-include <msa_1_46_board.scad>
+include <board.scad>
 
 module cup()
 {
@@ -57,22 +58,6 @@ module lens_fit()
         {
             cylinder(r = cup_or + 4, h = 1.5);
             translate([0, 0, -1]) cylinder(r = cup_or - 0.01, h = 4);
-        }
-}
-
-// Thin thread rings at a few scales, to find the best fit in the mask. Each
-// has a bar across it to grip, so it can be screwed all the way in and out.
-module thread_test()
-{
-    scales = [0.994, 0.997, 1.000];
-    for (i = [0 : len(scales) - 1])
-        translate([i * 56, 0, 0])
-        {
-            vpu_thread(scales[i]);
-            translate([-21.5, -2.5, 0]) cube([43, 5, 6]);
-            // Notches on the rim say which scale it is: 1 to 3
-            for (n = [0 : i])
-                rotate([0, 0, n * 8]) translate([0, 21.2, 7.2]) cube([1.2, 1.5, 1.6]);
         }
 }
 

@@ -13,10 +13,10 @@
 // The PCB stays on the board, and has to come out through the display's cup
 // with it, so it fits inside adapter_r.
 //
-// The PCB itself is the KiCad project in hardware/header_adapter, and the
+// The PCB itself is the KiCad project in this folder, and the
 // numbers here match it.
 //
-// Everything here is in the board's coordinates (see msa_1_46_board.scad).
+// Everything here is in the board's coordinates (see ../board.scad).
 
 header_pin_tip = -12.95;            // where the header's pins end
 header_pin_length = 3.4;            // how far they stand out of the header's plastic (measured)

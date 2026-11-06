@@ -15,19 +15,22 @@ A 3D printable housing that screws the [Waveshare ESP32-S3-Touch-LCD-1.46](https
 
 ## Files
 
-- `msa_1_46_housing.scad` - The design, in [OpenSCAD](https://openscad.org/).  All of the dimensions are named settings at the top.
-- `msa_1_46_speaker_housing.scad` - The speaker housing (see below).
+- `msa_housing.scad` - The design, in [OpenSCAD](https://openscad.org/).  All of the dimensions are named settings at the top.
+- `msa_speaker_housing.scad` - The speaker housing (see below).
 - `render.sh` - Renders all of the speaker housing's parts to STL files.
-- `msa_1_46_board.scad` - The board's dimensions and the thread, shared by both housings.
-- `vendor/vpu_thread.stl` - The MSA thread, taken from the 1.28" design (see Credits).  It's been cleaned up into a single solid, and the original's inner lip has been removed so the inside is a plain 42 mm bore.
+- `board.scad` - The board's dimensions, shared by both housings.
+- `header_adapter/` - The J9 header adapter PCB used by the speaker housing (see below).
+- `travel_case/` - A case to carry the housing in.
+
+The MSA voice port thread, the speaker housing's turning collar, and the thread test rings are shared with the other boards' housings, in [`../../masks/msa_millennium`](../../masks/msa_millennium/).
 
 To make the STL files to print:
 
 ```
-openscad -o housing.stl msa_1_46_housing.scad
-openscad -D 'part="fit_test"' -o fit_test.stl msa_1_46_housing.scad
-openscad -D 'part="lens_fit"' -o lens_fit.stl msa_1_46_housing.scad
-openscad -D 'part="thread_test"' -o thread_test.stl msa_1_46_housing.scad
+openscad -o housing.stl msa_housing.scad
+openscad -D 'part="fit_test"' -o fit_test.stl msa_housing.scad
+openscad -D 'part="lens_fit"' -o lens_fit.stl msa_housing.scad
+openscad -D 'part="thread_test"' -o thread_test.stl msa_housing.scad
 ```
 
 Everything is already turned the right way up to print, with the front of the housing on the print bed.
@@ -40,11 +43,11 @@ Print these first.  They're small and quick, and they save printing the whole ho
 - **`lens_fit`** - The front 3 mm of the cup.  The board's glass should drop in with a little play, but not rattle.  Adjust `clearance` if it doesn't.
 - **`thread_test`** - Three thin thread rings at 99.4%, 99.7% and 100% of the original thread's diameter, each with a bar across the middle to grip.  The notches on the rim count 1 to 3 in that order.  Try each one in the mask's voice port and set `thread_scale` to the best one.  99.7% fit best, which is what `thread_scale` is set to.  (An earlier round found 98% too loose and 102% too tight.)
 
-The start of the thread is beveled (`thread_lead_in`) so it catches more easily when you screw it in.
+The start of the thread is beveled (`thread_lead_in`) so it catches more easily when you screw it in.  Both settings are in `../../masks/msa_millennium/voice_port.scad`, so they change the thread for every board's housing.
 
 ## Speaker housing
 
-`msa_1_46_speaker_housing.scad` is an all-in-one version: the display in the middle, a small speaker in a pod on each side, and a chamber behind for a bigger battery, two MAX98357A amplifier boards and a USB-C charging port.  The voice port thread is on a separate collar that turns on the back, so the housing can be held level while the collar is screwed into the mask.
+`msa_speaker_housing.scad` is an all-in-one version: the display in the middle, a small speaker in a pod on each side, and a chamber behind for a bigger battery, two MAX98357A amplifier boards and a USB-C charging port.  The voice port thread is on a separate collar that turns on the back, so the housing can be held level while the collar is screwed into the mask.
 
 **Status: draft.**  It's been fully assembled and worn, with the buttons and collar still being tuned.
 
@@ -52,7 +55,7 @@ The board is turned a quarter turn, with its buttons at the top, so set the disp
 
 ### Parts
 
-Run `./render.sh` in this folder to render every part to the `stl/` folder, or `./render.sh body back` for just those parts.  It needs [OpenSCAD](https://openscad.org/).  A single part can also be rendered by hand with, for example, `openscad -D 'part="body"' -o body.stl msa_1_46_speaker_housing.scad`.  The parts are all turned the right way up to print.
+Run `./render.sh` in this folder to render every part to the `stl/` folder, or `./render.sh body back` for just those parts.  It needs [OpenSCAD](https://openscad.org/).  A single part can also be rendered by hand with, for example, `openscad -D 'part="body"' -o body.stl msa_speaker_housing.scad`.  The parts are all turned the right way up to print.
 
 - **`body`** - The display cup and the speaker pods.  It prints well standing on one of its short sides with tree supports.  Printed on its back, the curved front edges show more layer lines.
 - **`back`** - Closes the chamber, with the posts the collar turns on.  Use 4 or more walls so the posts are solid.
@@ -70,7 +73,7 @@ Run `./render.sh` in this folder to render every part to the `stl/` folder, or `
 - A LiPo battery up to 50.5 x 34 x 9.9 mm, rated to charge at 1C (the board charges at 2 A), with a JST 1.25 plug
 - Two MAX98357A amplifier boards
 - A USB-C breakout with 5.1k resistors from CC1 and CC2 to GND
-- The J9 header adapter in [`../header_adapter`](../header_adapter/), with its JST SH socket and 10k resistor, and a 10-pin JST SH cable (A10SR10SR30K102A, 4") cut near one end
+- The J9 header adapter in [`header_adapter`](header_adapter/), with its JST SH socket and 10k resistor, and a 10-pin JST SH cable (A10SR10SR30K102A, 4") cut near one end
 - Two 220 uF 10 V low-ESR electrolytic capacitors, 6.3 mm diameter
 - M2 socket head screws: four M2 x 8 for the back, four M2 x 6 for the washer, and six M2 x 10 with nuts and washers for the boards
 
@@ -110,12 +113,12 @@ Wire each amplifier signal to the first amplifier, then run a short wire from th
 
 ## Travel case
 
-There's a hinged case to carry the housing in, in [`../travel-case`](../travel-case/).
+There's a hinged case to carry the housing in, in [`travel_case`](travel_case/).
 
 ## Credits and License
 
 This design is based on [RP2040-LCD-1.28-MSA](https://www.printables.com/model/538771-rp2040-lcd-128-msa) by whyrlpool, whose voice port thread was in turn adapted from the [Gas Mask VPU Cover (MSA compatible)](https://cults3d.com/en/3d-model/various/gas-mask-vpu-cover-msa-compatible).
 
-Like the design it's based on, everything in this folder is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).  This is separate from the license of the rest of the repository.
+Like the design it's based on, everything in this folder (apart from the travel case, which has its own license) is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).  This is separate from the license of the rest of the repository.
 
 Board dimensions come from Waveshare's published drawing and 3D model of the ESP32-S3-Touch-LCD-1.46.
