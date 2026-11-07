@@ -368,6 +368,8 @@ Animated GIFs are decoded in RAM while they're on screen, so on the RP2040/RP235
 
 For example, a 200x168 GIF needs about 90kB and a full screen 240x240 GIF needs about 140kB.  The RP2040 has 264kB of RAM in total and the RP2350 has 520kB, and the rest of the app needs some of that too.  If you flash a new image and it doesn't start running as expected, you've likely run out of memory.  Reduce the size of your animated GIF and try again.
 
+GIFs that are too big for the RP2040 can still go in for the other boards.  Put their lines in `core/media/image_list.c` inside `#if RCAT_LARGE_IMAGES`, like the full screen `radar3c` GIF.  Each board's `.cmake` file sets `RCAT_LARGE_IMAGES`: it's on for the RP2350, and off for the RP2040.  It's off for the ESP32 boards too, because converted for their bigger screens these GIFs take up a lot of the firmware's space.  Put them on the SD card instead.
+
 The ESP32-S3 board decodes GIFs into its 8MB of PSRAM, so even full screen GIFs fit easily.
 
 ## Project layout

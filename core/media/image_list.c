@@ -9,6 +9,9 @@
  *
  * IMAGE(name, is_gif): name is the image's file name without the extension.
  * It's also what the Startup Image setting shows and saves.
+ *
+ * Big animated GIFs go inside #if RCAT_LARGE_IMAGES, so they're only built
+ * for boards with the RAM to play them (set in each board's .cmake file).
  */
 #include "media/image_list.h"
 
@@ -19,6 +22,9 @@ LV_IMAGE_DECLARE(RCatLogo);
 LV_IMAGE_DECLARE(nonbinary);
 LV_IMAGE_DECLARE(hal9000);
 LV_IMAGE_DECLARE(evileye);
+#if RCAT_LARGE_IMAGES
+LV_IMAGE_DECLARE(radar3c);     // full screen, about 140kB to play on a 240x240 screen
+#endif
 
 const builtin_image_t builtin_images[] = {
     IMAGE(home,      false),
@@ -26,6 +32,9 @@ const builtin_image_t builtin_images[] = {
     IMAGE(nonbinary, false),
     IMAGE(hal9000,   false),
     IMAGE(evileye,   true),
+#if RCAT_LARGE_IMAGES
+    IMAGE(radar3c,   true),
+#endif
 };
 
 const size_t builtin_image_count = sizeof(builtin_images) / sizeof(builtin_images[0]);

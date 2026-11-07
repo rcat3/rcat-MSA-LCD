@@ -43,6 +43,12 @@ idf_component_register(SRCS ${CORE_SOURCES} ${IMAGE_SOURCES}
 if(NOT CMAKE_BUILD_EARLY_EXPANSION)
     rcat_feature_definitions(feature_definitions)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE ${feature_definitions})
+
+    # The bigger animated GIFs, on boards with room for them (see board.cmake)
+    idf_build_get_property(large_images RCAT_LARGE_IMAGES)
+    if(large_images)
+        target_compile_definitions(${COMPONENT_LIB} PRIVATE RCAT_LARGE_IMAGES=1)
+    endif()
 endif()
 
 # Images and sounds can be loaded from the SD card

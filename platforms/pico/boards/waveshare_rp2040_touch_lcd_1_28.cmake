@@ -3,3 +3,4 @@
 set(PICO_BOARD pico)
 set(BOARD_DIR touch_lcd_1_28)
 set(RCAT_IMAGE_SIZE 240)     # 240x240 round display
+set(RCAT_LARGE_IMAGES OFF)   # 264kB of RAM: too little for full screen GIFs
