@@ -17,12 +17,10 @@
 #include "driver/i2c_master.h"
 #include "driver/i2s_std.h"
 #include "driver/ledc.h"
-#include "driver/sdmmc_host.h"
 #include "driver/spi_master.h"
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_cali_scheme.h"
 #include "esp_adc/adc_oneshot.h"
-#include "esp_event.h"
 #include "esp_heap_caps.h"
 #include "esp_io_expander_tca9554.h"
 #include "esp_lcd_panel_io.h"
@@ -31,27 +29,13 @@
 #include "esp_lcd_spd2010.h"
 #include "esp_lcd_touch_spd2010.h"
 #include "esp_log.h"
-#include "esp_netif.h"
-#include "esp_random.h"
 #include "esp_timer.h"
-#include "esp_vfs_fat.h"
-#include "esp_wifi.h"
-#include "nvs.h"
-#include "nvs_flash.h"
 
 #include "hal.h"
 #include "lvgl.h"
+#include "rcat_esp32.h"
 
 static const char *TAG = "board";
-
-// WiFi needs about this much internal RAM to start. Below it, starting would
-// fail part way, and the driver can't give back what it took (each failed
-// try costs about 9 KB), so it isn't tried.
-#define WIFI_MIN_FREE_INTERNAL  (40 * 1024)
-
-// Phone remote hotspot
-#define HOTSPOT_CHANNEL     6
-#define HOTSPOT_MAX_PHONES  4
 
 #define LCD_H_RES           412
 #define LCD_V_RES           412
@@ -85,21 +69,6 @@ static const char *TAG = "board";
 #define PIN_PWR_HOLD        7
 #define POWER_OFF_HOLD_MS   2000
 #define POWER_KEY_POLL_MS   100
-
-// QMI8658 IMU on the I2C bus. Only its accelerometer is used.
-#define IMU_ADDR            0x6B
-#define IMU_REG_WHO_AM_I    0x00
-#define IMU_WHO_AM_I        0x05
-#define IMU_REG_CTRL1       0x02
-#define IMU_REG_CTRL2       0x03
-#define IMU_REG_CTRL7       0x08
-#define IMU_REG_AX_L        0x35
-#define IMU_CTRL1_AUTO_INC  0x40    // reads step through the registers; data is little-endian
-#define IMU_CTRL2_2G_120HZ  0x06    // +/-2 g, about 120 readings a second
-#define IMU_CTRL7_ACCEL_ON  0x01
-#define IMU_G_PER_COUNT     (2.0f / 32768.0f)
-#define IMU_I2C_HZ          400000
-#define IMU_TIMEOUT_MS      50
 
 // Battery voltage on GPIO8 through a 1/3 divider
 #define BAT_ADC_CHANNEL     ADC_CHANNEL_7
@@ -154,7 +123,6 @@ static const char *TAG = "board";
 #define PIN_SD_CLK          14
 #define PIN_SD_CMD          17
 #define PIN_SD_D0           16
-#define SD_MOUNT_POINT      "/sdcard"
 
 // Backlight PWM
 #define BL_LEDC_TIMER       LEDC_TIMER_0
@@ -173,13 +141,7 @@ static const char *TAG = "board";
 #define DRAW_BUF_LINES      40
 #define DRAW_BUF_BYTES      (LCD_H_RES * DRAW_BUF_LINES * 2)
 
-// Settings are stored as a blob in NVS
-#define NVS_NAMESPACE       "rcat"
-#define NVS_SETTINGS_KEY    "settings"
-
 static i2c_master_bus_handle_t i2c_bus;
-static i2c_master_dev_handle_t imu;
-static bool imu_tried;
 static esp_io_expander_handle_t io_expander;
 static esp_lcd_panel_handle_t panel;
 static esp_lcd_touch_handle_t touch;
@@ -195,12 +157,6 @@ static i2s_chan_handle_t spk_channel;
 static rcat_hal_audio_fill_cb_t spk_cb;
 static void *spk_cb_user_data;
 
-static bool wifi_ready;
-static volatile bool wifi_wanted;
-static volatile bool wifi_connected;
-static esp_ip4_addr_t wifi_ip;
-static volatile bool hotspot_on;
-
 static lv_display_t *display;
 static uint8_t rotation_turns;      // clockwise quarter turns
 static uint8_t *draw_buf1;
@@ -215,7 +171,6 @@ static void panel_init(void);
 static void panel_clear(void);
 static void touch_init(void);
 static void battery_init(void);
-static void settings_storage_init(void);
 static bool color_trans_done_cb(esp_lcd_panel_io_handle_t io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx);
 static void disp_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
 static void rounder_event_cb(lv_event_t *e);
@@ -225,7 +180,7 @@ static uint32_t tick_get_cb(void);
 int rcat_hal_init(void)
 {
     power_init();
-    settings_storage_init();
+    rcat_esp32_settings_init();
     i2c_and_expander_init();
     backlight_init();
     panel_init();
@@ -293,68 +248,12 @@ bool rcat_hal_battery_voltage(float *volts)
     return true;
 }
 
-/********************************************************************************
-function:	Start the IMU's accelerometer the first time it's needed. Returns
-            false if the IMU doesn't answer.
-parameter:
-********************************************************************************/
-static bool imu_start(void)
-{
-    if (imu_tried)
-    {
-        return imu != NULL;
-    }
-    imu_tried = true;
-
-    const i2c_device_config_t dev_config = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = IMU_ADDR,
-        .scl_speed_hz = IMU_I2C_HZ,
-    };
-    if (i2c_master_bus_add_device(i2c_bus, &dev_config, &imu) != ESP_OK)
-    {
-        imu = NULL;
-        return false;
-    }
-
-    uint8_t reg = IMU_REG_WHO_AM_I;
-    uint8_t id = 0;
-    const uint8_t setup[][2] = {
-        { IMU_REG_CTRL1, IMU_CTRL1_AUTO_INC },
-        { IMU_REG_CTRL2, IMU_CTRL2_2G_120HZ },
-        { IMU_REG_CTRL7, IMU_CTRL7_ACCEL_ON },
-    };
-    bool ok = i2c_master_transmit_receive(imu, &reg, 1, &id, 1, IMU_TIMEOUT_MS) == ESP_OK && id == IMU_WHO_AM_I;
-    for (size_t i = 0; ok && i < sizeof(setup) / sizeof(setup[0]); i++)
-    {
-        ok = i2c_master_transmit(imu, setup[i], 2, IMU_TIMEOUT_MS) == ESP_OK;
-    }
-    if (!ok)
-    {
-        ESP_LOGW(TAG, "No IMU (id 0x%02x)", id);
-        i2c_master_bus_rm_device(imu);
-        imu = NULL;
-    }
-    return ok;
-}
-
 bool rcat_hal_accel_read(float *x, float *y, float *z)
 {
-    if (!imu_start())
-    {
-        return false;
-    }
-
-    uint8_t reg = IMU_REG_AX_L;
-    uint8_t raw[6];
-    if (i2c_master_transmit_receive(imu, &reg, 1, raw, sizeof(raw), IMU_TIMEOUT_MS) != ESP_OK)
-    {
-        return false;
-    }
     float a[3];
-    for (int i = 0; i < 3; i++)
+    if (!rcat_esp32_qmi8658_read(i2c_bus, a))
     {
-        a[i] = (int16_t)(raw[2 * i] | (raw[2 * i + 1] << 8)) * IMU_G_PER_COUNT;
+        return false;
     }
 
     // The IMU's axes in the panel's own frame (x right, y down, z out of the
@@ -377,38 +276,6 @@ bool rcat_hal_accel_read(float *x, float *y, float *z)
     return true;
 }
 
-bool rcat_hal_settings_read(void *data, size_t len)
-{
-    nvs_handle_t nvs;
-    if (nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs) != ESP_OK)
-    {
-        return false;   // nothing saved yet
-    }
-
-    // Like erased flash, so a shorter saved blob leaves the rest at 0xFF.
-    memset(data, 0xFF, len);
-    size_t stored_len = len;
-    esp_err_t err = nvs_get_blob(nvs, NVS_SETTINGS_KEY, data, &stored_len);
-    nvs_close(nvs);
-    return err == ESP_OK;
-}
-
-bool rcat_hal_settings_write(const void *data, size_t len)
-{
-    nvs_handle_t nvs;
-    if (nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs) != ESP_OK)
-    {
-        return false;
-    }
-
-    esp_err_t err = nvs_set_blob(nvs, NVS_SETTINGS_KEY, data, len);
-    if (err == ESP_OK)
-    {
-        err = nvs_commit(nvs);
-    }
-    nvs_close(nvs);
-    return err == ESP_OK;
-}
 
 /********************************************************************************
 function:	Read the microphone in blocks and hand them to the callback
@@ -619,289 +486,11 @@ bool rcat_hal_audio_out_start(rcat_hal_audio_fill_cb_t cb, void *user_data)
     return true;
 }
 
-static void wifi_event_cb(void *arg, esp_event_base_t base, int32_t id, void *data)
-{
-    if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START)
-    {
-        esp_wifi_connect();
-    }
-    else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED)
-    {
-        wifi_connected = false;
-        if (wifi_wanted)
-        {
-            esp_wifi_connect();
-        }
-    }
-    else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP)
-    {
-        wifi_ip = ((ip_event_got_ip_t *)data)->ip_info.ip;
-        wifi_connected = true;
-        ESP_LOGI(TAG, "WiFi connected, " IPSTR, IP2STR(&wifi_ip));
-    }
-    else if (base == WIFI_EVENT && id == WIFI_EVENT_AP_STACONNECTED)
-    {
-        ESP_LOGI(TAG, "Hotspot: a phone joined");
-    }
-    else if (base == WIFI_EVENT && id == WIFI_EVENT_AP_STADISCONNECTED)
-    {
-        ESP_LOGI(TAG, "Hotspot: a phone left");
-    }
-}
 
-/* Start the WiFi driver, once, for joining a network or for the hotspot. Each
- * step is done once, so trying again after a failure carries on from where
- * it stopped. */
-static bool wifi_setup(void)
-{
-    static bool netif_ready;
-    static bool wifi_failed;
-
-    if (wifi_ready)
-    {
-        return true;
-    }
-    if (wifi_failed)
-    {
-        ESP_LOGE(TAG, "WiFi failed to start earlier. Restart the board to try again.");
-        return false;
-    }
-    size_t free_internal = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
-    ESP_LOGI(TAG, "Free internal RAM before WiFi: %u bytes (largest block %u)", (unsigned)free_internal,
-             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
-    if (free_internal < WIFI_MIN_FREE_INTERNAL)
-    {
-        ESP_LOGE(TAG, "Not enough internal RAM for WiFi (needs about %u bytes)", (unsigned)WIFI_MIN_FREE_INTERNAL);
-        return false;
-    }
-    if (!netif_ready)
-    {
-        esp_err_t err = esp_netif_init();
-        if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
-        {
-            ESP_LOGE(TAG, "Network setup failed (%s)", esp_err_to_name(err));
-            return false;
-        }
-        err = esp_event_loop_create_default();
-        if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
-        {
-            ESP_LOGE(TAG, "Event loop failed (%s)", esp_err_to_name(err));
-            return false;
-        }
-        netif_ready = true;
-    }
-    wifi_init_config_t init_config = WIFI_INIT_CONFIG_DEFAULT();
-    esp_err_t err = esp_wifi_init(&init_config);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "WiFi didn't start (%s)", esp_err_to_name(err));
-        wifi_failed = true;
-        return false;
-    }
-    esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_cb, NULL);
-    esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_cb, NULL);
-    esp_wifi_set_storage(WIFI_STORAGE_RAM);     // nothing about the networks is kept in flash
-    wifi_ready = true;
-    return true;
-}
-
-/* Stop whichever of the two is running. */
-static void wifi_stop(void)
-{
-    if (wifi_wanted)
-    {
-        wifi_wanted = false;
-        wifi_connected = false;
-        esp_wifi_disconnect();
-    }
-    hotspot_on = false;
-    esp_wifi_stop();
-}
-
-bool rcat_hal_wifi_connect(const char *ssid, const char *password)
-{
-    static esp_netif_t *sta_netif;
-
-    if (!wifi_setup())
-    {
-        return false;
-    }
-    wifi_stop();
-    if (sta_netif == NULL)
-    {
-        sta_netif = esp_netif_create_default_wifi_sta();
-    }
-    esp_wifi_set_mode(WIFI_MODE_STA);
-
-    wifi_config_t config = { 0 };
-    // These fields don't need a terminating zero when they're full.
-    memcpy(config.sta.ssid, ssid, strnlen(ssid, sizeof(config.sta.ssid)));
-    memcpy(config.sta.password, password, strnlen(password, sizeof(config.sta.password)));
-    esp_wifi_set_config(WIFI_IF_STA, &config);
-
-    wifi_wanted = true;
-    esp_wifi_start();
-    // Power saving delays packets by up to a beacon interval, so leave it off
-    // while the voice lab streams.
-    esp_wifi_set_ps(WIFI_PS_NONE);
-    ESP_LOGI(TAG, "Connecting to WiFi network %s. Free internal RAM: %u bytes", ssid,
-             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
-    return true;
-}
-
-void rcat_hal_wifi_disconnect(void)
-{
-    if (!wifi_ready || !wifi_wanted)
-    {
-        return;
-    }
-    wifi_stop();
-    ESP_LOGI(TAG, "WiFi off");
-}
-
-bool rcat_hal_wifi_address(char *ip, size_t len)
-{
-    if (!wifi_connected)
-    {
-        return false;
-    }
-    esp_ip4_addr_t addr = wifi_ip;
-    snprintf(ip, len, IPSTR, IP2STR(&addr));
-    return true;
-}
-
-bool rcat_hal_hotspot_start(const char *ssid, const char *password)
-{
-    static esp_netif_t *ap_netif;
-
-    if (!wifi_setup())
-    {
-        return false;
-    }
-    wifi_stop();
-    if (ap_netif == NULL)
-    {
-        ap_netif = esp_netif_create_default_wifi_ap();
-        if (ap_netif == NULL)
-        {
-            ESP_LOGE(TAG, "Hotspot: no network interface");
-            return false;
-        }
-        // Have the phones ask the board for DNS, so it can send every name to
-        // itself and the phone shows its page on joining.
-        esp_netif_ip_info_t ip_info;
-        esp_netif_get_ip_info(ap_netif, &ip_info);
-        esp_netif_dns_info_t dns = { 0 };
-        dns.ip.u_addr.ip4.addr = ip_info.ip.addr;
-        dns.ip.type = ESP_IPADDR_TYPE_V4;
-        uint8_t offer_dns = 0x02;   // OFFER_DNS
-        esp_netif_dhcps_stop(ap_netif);
-        esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &offer_dns,
-                               sizeof(offer_dns));
-        esp_netif_set_dns_info(ap_netif, ESP_NETIF_DNS_MAIN, &dns);
-        // And tell newer phones straight away where the sign-in page is
-        // (DHCP option 114). The option keeps the pointer, so it's static.
-        static const char portal_uri[] = "http://" RCAT_HAL_HOTSPOT_ADDRESS "/";
-        esp_netif_dhcps_option(ap_netif, ESP_NETIF_OP_SET, ESP_NETIF_CAPTIVEPORTAL_URI, (void *)portal_uri,
-                               strlen(portal_uri));
-        esp_netif_dhcps_start(ap_netif);
-    }
-    esp_wifi_set_mode(WIFI_MODE_AP);
-
-    wifi_config_t config = { 0 };
-    size_t ssid_len = strnlen(ssid, sizeof(config.ap.ssid));
-    memcpy(config.ap.ssid, ssid, ssid_len);
-    config.ap.ssid_len = (uint8_t)ssid_len;
-    memcpy(config.ap.password, password, strnlen(password, sizeof(config.ap.password)));
-    config.ap.channel = HOTSPOT_CHANNEL;
-    config.ap.max_connection = HOTSPOT_MAX_PHONES;
-    config.ap.authmode = WIFI_AUTH_WPA2_PSK;
-    config.ap.pmf_cfg.capable = true;
-    esp_err_t err = esp_wifi_set_config(WIFI_IF_AP, &config);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Hotspot: bad settings (%s)", esp_err_to_name(err));
-        return false;
-    }
-    err = esp_wifi_start();
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Hotspot didn't start (%s)", esp_err_to_name(err));
-        return false;
-    }
-    hotspot_on = true;
-    ESP_LOGI(TAG, "Hotspot %s on. Free internal RAM: %u bytes (largest block %u)", ssid,
-             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
-             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
-    return true;
-}
-
-void rcat_hal_hotspot_stop(void)
-{
-    if (!wifi_ready || !hotspot_on)
-    {
-        return;
-    }
-    wifi_stop();
-    ESP_LOGI(TAG, "Hotspot off");
-}
-
-int rcat_hal_hotspot_clients(void)
-{
-    wifi_sta_list_t list;
-    if (!hotspot_on || esp_wifi_ap_get_sta_list(&list) != ESP_OK)
-    {
-        return 0;
-    }
-    return list.num;
-}
-
-uint32_t rcat_hal_random(void)
-{
-    // Truly random while the radio's on, which it is for the hotspot
-    return esp_random();
-}
 
 bool rcat_hal_storage_mount(const char **path)
 {
-    static bool mounted;
-
-    if (!mounted)
-    {
-        sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-        sdmmc_slot_config_t slot = SDMMC_SLOT_CONFIG_DEFAULT();
-        slot.width = 1;
-        slot.clk = PIN_SD_CLK;
-        slot.cmd = PIN_SD_CMD;
-        slot.d0 = PIN_SD_D0;
-        slot.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
-
-        // Never format the card, even if it can't be read. It may have files
-        // someone wants to keep.
-        const esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-            .format_if_mount_failed = false,
-            .max_files = 4,
-            .allocation_unit_size = 16 * 1024,
-        };
-        sdmmc_card_t *card;
-        esp_err_t err = esp_vfs_fat_sdmmc_mount(SD_MOUNT_POINT, &host, &slot, &mount_config, &card);
-        if (err != ESP_OK)
-        {
-            ESP_LOGW(TAG, "No SD card (%s)", esp_err_to_name(err));
-            return false;
-        }
-        ESP_LOGI(TAG, "SD card mounted, %llu MB", ((uint64_t)card->csd.capacity) * card->csd.sector_size / (1024 * 1024));
-        mounted = true;
-    }
-
-    *path = SD_MOUNT_POINT;
-    return true;
-}
-
-void rcat_hal_delay_ms(uint32_t ms)
-{
-    TickType_t ticks = pdMS_TO_TICKS(ms);
-    vTaskDelay(ticks > 0 ? ticks : 1);
+    return rcat_esp32_sd_mount(PIN_SD_CLK, PIN_SD_CMD, PIN_SD_D0, path);
 }
 
 /********************************************************************************
@@ -963,16 +552,6 @@ static void power_init(void)
     ESP_ERROR_CHECK(esp_timer_start_periodic(timer, POWER_KEY_POLL_MS * 1000));
 }
 
-static void settings_storage_init(void)
-{
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
-}
 
 static void i2c_and_expander_init(void)
 {
