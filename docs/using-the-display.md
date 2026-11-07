@@ -1,6 +1,6 @@
 # Using the Display
 
-The display is organized into features, like Images, Voice and Settings (see [Features](features/README.md) for them all).
+When it turns on, the display shows the DroneLab logo for a couple of seconds while it gets ready.  Then it's organized into features, like Images, Voice and Settings (see [Features](features/README.md) for them all).
 
 - **Swipe up and down** to move between features.
 - **Swipe left and right** to move between the pages of a feature.  Each feature remembers which page you were on.

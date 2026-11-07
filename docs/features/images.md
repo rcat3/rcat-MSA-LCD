@@ -55,7 +55,7 @@ The ESP32-S3 boards can also show images from their micro SD card, so you can ch
 
 1. Format the card as FAT32 (most cards come that way) and make a folder called `images` on it.  If there's no `images` folder, the top level of the card is used instead.
 2. Copy PNG, JPG, BMP or animated GIF files into it.
-3. Put the card in the board and switch it on.  It shows *Loading images...* while it reads the card.
+3. Put the card in the board and switch it on.  It reads the card while the DroneLab logo is on screen.
 
 The images from the card come first, sorted by file name, followed by the built-in images.  They can be picked in the *Startup* setting by their file name (without the extension).  If a card image has the same name as a built-in image, the card image is the one picked.  The card is only read when the board starts, so restart it after changing the card.
 

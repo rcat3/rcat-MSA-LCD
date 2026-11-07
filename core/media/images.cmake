@@ -1,5 +1,7 @@
-# Converts every image in imgs/ into a C file sized for the board's screen,
-# using tools/img2c.py. Used by both the pico-sdk and ESP-IDF builds.
+# Converts every image in imgs/, and the firmware's own pictures in
+# core/ui/assets/ (like the logo shown at startup), into C files sized for the
+# board's screen, using tools/img2c.py. Used by both the pico-sdk and ESP-IDF
+# builds.
 #
 #   rcat_generate_images(<out_var> <screen_size> <python>)
 #
@@ -25,7 +27,8 @@ function(rcat_generate_images out_var screen_size python)
          ${RCAT_IMAGES_REPO_ROOT}/imgs/*.bmp ${RCAT_IMAGES_REPO_ROOT}/imgs/*.BMP
          ${RCAT_IMAGES_REPO_ROOT}/imgs/*.jpg ${RCAT_IMAGES_REPO_ROOT}/imgs/*.JPG
          ${RCAT_IMAGES_REPO_ROOT}/imgs/*.jpeg ${RCAT_IMAGES_REPO_ROOT}/imgs/*.JPEG
-         ${RCAT_IMAGES_REPO_ROOT}/imgs/*.gif ${RCAT_IMAGES_REPO_ROOT}/imgs/*.GIF)
+         ${RCAT_IMAGES_REPO_ROOT}/imgs/*.gif ${RCAT_IMAGES_REPO_ROOT}/imgs/*.GIF
+         ${RCAT_IMAGES_REPO_ROOT}/core/ui/assets/*.png)
 
     set(generated "")
     set(names "")
@@ -35,7 +38,7 @@ function(rcat_generate_images out_var screen_size python)
         get_filename_component(name ${image} NAME_WE)
         string(REGEX REPLACE "[^A-Za-z0-9_]" "_" name "${name}")
         if(name IN_LIST names)
-            message(FATAL_ERROR "Two images in imgs/ have the name '${name}'. Rename one of them.")
+            message(FATAL_ERROR "Two images in imgs/ or core/ui/assets/ have the name '${name}'. Rename one of them.")
         endif()
         list(APPEND names ${name})
 
