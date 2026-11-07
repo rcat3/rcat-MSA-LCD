@@ -110,26 +110,25 @@ cd rcat-MSA-LCD   (wherever you cloned this repo)
 export PICO_SDK_PATH=$HOME/pico-sdk   (or wherever you put it)
 ```
 
-Use an absolute path for `PICO_SDK_PATH`.  A relative path gets resolved from inside the `build` folder, not from where you run the command, which is confusing.
+Use an absolute path for `PICO_SDK_PATH`.  A relative path gets resolved from inside the build folder, not from where you run the command, which is confusing.
+
+Each board gets its own build folder, so you can build for both without them getting in each other's way.
 
 If you're building for the RP2350 version of the display:
 ```
-cmake -S platforms/pico -B build -DBOARD=waveshare_rp2350_touch_lcd_1_28
+cmake -S platforms/pico -B build-rp2350 -DBOARD=waveshare_rp2350_touch_lcd_1_28
+cmake --build build-rp2350 -j
 ```
 
 Otherwise, if you're building for the RP2040 display:
 ```
-cmake -S platforms/pico -B build -DBOARD=waveshare_rp2040_touch_lcd_1_28
+cmake -S platforms/pico -B build-rp2040 -DBOARD=waveshare_rp2040_touch_lcd_1_28
+cmake --build build-rp2040 -j
 ```
 
-Then for either version, run:
-```
-cmake --build build -j
-```
+When compilation is complete, you should have a file called `rcat-msa-lcd.uf2` in the build folder (`build-rp2350/rcat-msa-lcd.uf2` or `build-rp2040/rcat-msa-lcd.uf2`).  This is the image file you'll flash in the next step.
 
-When compilation is complete, you should have a file called `build/rcat-msa-lcd.uf2`.  This is the image file you'll flash in the next step.
-
-If you switch between boards, delete the `build` folder first (or use a different build folder for each board).
+If CMake complains that `PICO_PLATFORM` doesn't match the board, the build folder was set up for the other board.  Use the other board's folder, or delete the folder and run the `cmake -S` command again.
 
 #### Flashing
 
