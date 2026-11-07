@@ -2,6 +2,8 @@
 
 A 3D printable housing that screws the [Waveshare RP2040-Touch-LCD-1.28](https://www.waveshare.com/wiki/RP2040-Touch-LCD-1.28) or [RP2350-Touch-LCD-1.28](https://www.waveshare.com/wiki/RP2350-Touch-LCD-1.28) into the voice port of an MSA Millennium mask, with the battery and a power switch inside.
 
+This README is about the design files.  For the whole build, with the parts to buy, wiring, putting it together and charging, see the [build guide](../../../docs/hardware/waveshare_touch_lcd_1_28.md).
+
 **Status: draft, not yet printed.**  It's modeled from Waveshare's 3D model of the RP2040 board.  Their model of the RP2350 board leaves out the touch panel and the battery socket, so it's taken to be the same apart from its thicker PCB.
 
 ## How it goes together
@@ -35,7 +37,9 @@ The whole housing turns as it's screwed in, so how it ends up sitting depends on
 
 ## Parts
 
-Run `./render.sh` in this folder to render every part to the `stl/` folder, or `./render.sh body bezel` for just those parts.  A single part can also be rendered by hand with, for example, `openscad -D 'part="body"' -o body.stl msa_housing.scad`.  Set `board` in `board.scad` first.  The parts are all turned the right way up to print.
+Set `board` in `board.scad` to `"rp2040"` or `"rp2350"` first, then run `./render.sh` in this folder to render the housing's parts to the `stl/` folder.  It needs [OpenSCAD](https://openscad.org/).  `./render.sh tests` renders `phase_test` and `fit_test`, and `./render.sh body bezel` just those parts.  A single part can also be rendered by hand with, for example, `openscad -D 'part="body"' -o body.stl msa_housing.scad`.  The parts are all turned the right way up to print.
+
+There are no screws: the bezel snaps on and the switch clicks into place.
 
 - **`body`** - Printed back down.  The pocket for the USB-C plug needs a little support.
 - **`bezel`** - Printed front down.  PETG is a good choice, as its skirt flexes to snap on.
@@ -52,25 +56,13 @@ These come from the 3D model, not from a print, so check them with `fit_test`:
 - The switch's fit in its pocket (`switch_body`), that the lever moves freely in its slot, and that the catch clicks behind it (`catch_hook`).  If the catch is too stiff or breaks, print the body in PETG, which bends more than PLA before it breaks.
 - How firmly the bezel snaps on (`snap_bead`).
 
-## Parts to buy
+## Parts to buy, wiring and putting it together
 
-- A [Waveshare RP2040-Touch-LCD-1.28](https://www.amazon.com/dp/B0C4LRRVVN) *or* [RP2350-Touch-LCD-1.28](https://www.amazon.com/dp/B0DLBF5QKK)
-- A [3.7V 250-310mAh 502030 LiPo battery](https://www.amazon.com/dp/B08TBY5BFL) (5 x 20 x 30 mm) with a JST 1.25 mm plug.  **The battery at that link has its plug wired the opposite way from what the board wants.  Swap the + and - wires in the plug, or solder on a new one, before you plug it in.**
-- [JST 1.25 mm 2-pin cables](https://www.amazon.com/dp/B013JRWCBU), to wire the switch in
-- An SS12D00-style slide switch (about 8.5 x 3.5 x 3.5 mm, with its lever on top)
-- 1 mm foam tape, for the top of the battery
+See the [build guide](../../../docs/hardware/waveshare_touch_lcd_1_28.md).
 
-The boards charge their battery at 1 A, which is more than a 250-310 mAh LiPo is meant to take.  Don't leave it charging unattended.
+## Charge current
 
-## Putting it together
-
-1. Wire the switch into the battery's + lead, between the battery and the plug for the board.
-2. Push the switch into its pocket from inside the body, lever first, until it clicks past the catch and its lever is out through the slot.  To take it out again, lift the catch's tongue with a small screwdriver from inside and slide the switch back in.
-3. Stick a piece of 1 mm foam tape (or a few layers of Kapton tape) over the top of the battery, and lay it in its cradle with its leads at the left, in the notch.
-4. Plug the battery into the board, then drop the board in, with its USB-C port at the right-hand side of the pocket and the plug in the space beside the board.
-5. Snap the bezel on.
-
-To flash new firmware without taking it apart, plug the USB-C cable in and run `picotool load -f -x rcat-msa-lcd.uf2`.  The `-f` reboots the board into its programming mode itself, so you don't have to reach the BOOT button.
+The boards charge their battery at 1 A, set by R15 (160k) next to the charger chip, which is several times what a 250-310 mAh battery should take.  Changing R15 to about 560k brings it down to about 0.3 A.  The [build guide](../../../docs/hardware/waveshare_touch_lcd_1_28.md#charging) has the details and other values.
 
 ## Travel case
 

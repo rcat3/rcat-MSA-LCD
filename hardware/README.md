@@ -2,6 +2,8 @@
 
 3D printable housings and other hardware for the displays the firmware runs on.
 
+This is the design side.  To build one, start with its build guide, which has the parts to buy, printing, wiring and putting it together: [1.28"](../docs/hardware/waveshare_touch_lcd_1_28.md), [1.46"](../docs/hardware/waveshare_esp32s3_touch_lcd_1_46.md) or [1.75"](../docs/hardware/waveshare_esp32s3_touch_amoled_1_75.md).
+
 ## What fits what
 
 | Board | Firmware | Housings for the MSA Millennium | Other hardware |

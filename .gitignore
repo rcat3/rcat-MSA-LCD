@@ -26,3 +26,6 @@ hardware/boards/*/stl/
 # KiCad local settings and backups
 *.kicad_prl
 *-backups/
+
+# Front views the documentation renders are put together from
+tools/doc_renders/lineup/

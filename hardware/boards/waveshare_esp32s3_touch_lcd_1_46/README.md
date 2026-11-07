@@ -1,61 +1,57 @@
-# MSA Millennium Housing for the ESP32-S3-Touch-LCD-1.46
+# MSA Millennium Housings for the ESP32-S3-Touch-LCD-1.46
 
-A 3D printable housing that screws the [Waveshare ESP32-S3-Touch-LCD-1.46](https://docs.waveshare.com/ESP32-S3-Touch-LCD-1.46) into the voice port of an MSA Millennium mask.  It's for the version of the board **with the cover glass** (44.77 mm round lens).
+3D printable housings that screw the [Waveshare ESP32-S3-Touch-LCD-1.46](https://docs.waveshare.com/ESP32-S3-Touch-LCD-1.46) into the voice port of an MSA Millennium mask.  They're for the version of the board **with the cover glass** (44.77 mm round lens).  There are two:
 
-**Status: draft.**  The board, thread, micro SD slot and buttons have all been checked with full prints.
+- **The simple housing** (`msa_housing.scad`): one printed part, holding the board and a small battery.
+- **The speaker housing** (`msa_speaker_housing.scad`): the display between two speakers, with their amplifiers, a 2000 mAh battery and a USB-C charging port in a chamber behind, and a turning collar.
 
-## How it goes together
+This README is about the design files.  For the whole build, with the parts to buy, wiring and putting it together, see the [build guide](../../../docs/hardware/waveshare_esp32s3_touch_lcd_1_46.md).
+
+## Making the STL files
+
+Run `render.sh` in this folder.  It needs [OpenSCAD](https://openscad.org/).
+
+```
+./render.sh simple      # the simple housing
+./render.sh speaker     # the speaker housing
+./render.sh             # both
+```
+
+The STL files go in the `stl/` folder, turned the right way up to print.  The parts render in parallel; the speaker housing's body and collar take the longest, around a minute.
+
+To render just some parts, name them, like `./render.sh body back`.  A single part can also be rendered by hand, with for example `openscad -D 'part="body"' -o body.stl msa_speaker_housing.scad`.
+
+## The simple housing
+
+**Status:** the board, thread, micro SD slot and buttons have all been checked with full prints.
+
+### How it goes together
 
 - The board sits in a cup on the outside of the mask, with the glass flush with the front.  Its micro SD slot (left) and PWR/BOOT side buttons (right) stay reachable from the outside.  The buttons are pressed through flexible tabs in the wall, hinged at the front edge.
-- The USB-C port is covered by the wall.  The board charges its battery at up to 2 A, far more than a small LiPo is rated for, so this stops it being plugged in by accident.  Take the board out to use USB, and unplug the battery first.  To print the housing with an opening for the port, set `usb_access = true`.
-- The board screws to the cup's back plate with three M2 countersunk screws (about M2x5) into the standoffs on the back of the board.  The screws go in from the back, through the inside of the threaded part.
-- The back plate carries the MSA voice port thread.  The space inside the thread (42 mm across, 8 mm deep) holds the battery, a 702030 LiPo (7 x 20 x 30 mm).  The PWR button turns the board on and off (hold it for 2 seconds to turn off), so there's no separate switch.
+- The board screws to the cup's back plate, which carries the MSA voice port thread.  The space inside the thread (42 mm across, 8 mm deep) holds the battery, a 702030 LiPo (7 x 20 x 30 mm).  The PWR button turns the board on and off (hold it for 2 seconds to turn off), so there's no separate switch.
 - The board's battery connector sits between the board and the back plate, so it can't be reached once the board is screwed in.  Plug a short extension cable into it first, and connect the battery to that.  The extension's wires come out over the speaker, through the opening in the back plate.
 - There's a hole in the back plate behind the microphone.
+- The USB-C port is covered by the wall, so the board can't be plugged in to charge by accident (see [Charge current](#charge-current)).  Take the board out to use USB, and unplug the battery first.  To print the housing with an opening for the port, set `usb_access = true`.
 
-## Files
+### Parts to print
 
-- `msa_housing.scad` - The design, in [OpenSCAD](https://openscad.org/).  All of the dimensions are named settings at the top.
-- `msa_speaker_housing.scad` - The speaker housing (see below).
-- `render.sh` - Renders all of the speaker housing's parts to STL files.
-- `board.scad` - The board's dimensions, shared by both housings.
-- `header_adapter/` - The J9 header adapter PCB used by the speaker housing (see below).
-- `travel_case/` - A case to carry the housing in.
+- **`housing`** - The whole housing, in one piece.  It prints with its front on the bed.
 
-The MSA voice port thread, the speaker housing's turning collar, and the thread test rings are shared with the other boards' housings, in [`../../masks/msa_millennium`](../../masks/msa_millennium/).
+### Screws
 
-To make the STL files to print:
+| Screws | How many | Where they go |
+|---|---|---|
+| M2 countersunk, about M2 x 5 | 3 | Through the back plate into the standoffs on the back of the board.  They go in from the back, through the inside of the thread, and their heads sit flush. |
 
-```
-openscad -o housing.stl msa_housing.scad
-openscad -D 'part="fit_test"' -o fit_test.stl msa_housing.scad
-openscad -D 'part="lens_fit"' -o lens_fit.stl msa_housing.scad
-openscad -D 'part="thread_test"' -o thread_test.stl msa_housing.scad
-```
+## The speaker housing
 
-Everything is already turned the right way up to print, with the front of the housing on the print bed.
+**Status:** it's been fully assembled and worn, with the buttons and collar still being tuned.
 
-## Test prints
+The display sits in the middle, with a small speaker in a pod on each side, and a chamber behind for the battery, two MAX98357A amplifier boards and a USB-C charging port.  The voice port thread is on a collar that turns freely on the back, so the housing can be held level while the collar is screwed into the mask.  The board is turned a quarter turn, with its buttons at the top, so set the display's rotation to match in the settings.
 
-Print these first.  They're small and quick, and they save printing the whole housing several times.
+The wiring to the board goes through the [J9 header adapter](header_adapter/), a small PCB soldered onto the board's pin header, so the board can come out without cutting anything.  `header_adapter = true` (the default) shapes the back plate for it.
 
-- **`fit_test`** - The whole housing without the thread.  It's much quicker to print, and is enough to check the openings and buttons with the board fitted.
-- **`lens_fit`** - The front 3 mm of the cup.  The board's glass should drop in with a little play, but not rattle.  Adjust `clearance` if it doesn't.
-- **`thread_test`** - Three thin thread rings at 99.4%, 99.7% and 100% of the original thread's diameter, each with a bar across the middle to grip.  The notches on the rim count 1 to 3 in that order.  Try each one in the mask's voice port and set `thread_scale` to the best one.  99.7% fit best, which is what `thread_scale` is set to.  (An earlier round found 98% too loose and 102% too tight.)
-
-The start of the thread is beveled (`thread_lead_in`) so it catches more easily when you screw it in.  Both settings are in `../../masks/msa_millennium/voice_port.scad`, so they change the thread for every board's housing.
-
-## Speaker housing
-
-`msa_speaker_housing.scad` is an all-in-one version: the display in the middle, a small speaker in a pod on each side, and a chamber behind for a bigger battery, two MAX98357A amplifier boards and a USB-C charging port.  The voice port thread is on a separate collar that turns on the back, so the housing can be held level while the collar is screwed into the mask.
-
-**Status: draft.**  It's been fully assembled and worn, with the buttons and collar still being tuned.
-
-The board is turned a quarter turn, with its buttons at the top, so set the display's rotation to match in the settings.
-
-### Parts
-
-Run `./render.sh` in this folder to render every part to the `stl/` folder, or `./render.sh body back` for just those parts.  It needs [OpenSCAD](https://openscad.org/).  A single part can also be rendered by hand with, for example, `openscad -D 'part="body"' -o body.stl msa_speaker_housing.scad`.  The parts are all turned the right way up to print.
+### Parts to print
 
 - **`body`** - The display cup and the speaker pods.  It prints well standing on one of its short sides with tree supports.  Printed on its back, the curved front edges show more layer lines.
 - **`back`** - Closes the chamber, with the posts the collar turns on.  Use 4 or more walls so the posts are solid.
@@ -64,56 +60,53 @@ Run `./render.sh` in this folder to render every part to the `stl/` folder, or `
 - **`gasket`** - A thin ring between the back and the collar, so the housing doesn't turn by itself.  Print it in TPU, or cut it from 1 mm rubber or craft foam.
 - **`plungers`** - Two pins that press the board's side buttons through the top of the housing.
 - **`spacers`** - Six short tubes the amplifier and charging port boards stand on.
-- **`pod_test`** - One speaker pod on its own, to check the speaker's fit.
-- **`plunger_test`** - Plungers in three lengths, two of each, standing 1.3, 1.8 and 2.3 mm out of the housing.  Set `plunger_proud` to the one that works best.
 
-### Parts to buy
+### Screws
 
-- Two speaker modules, 35 x 25 x 6.5 mm sealed boxes with an oval cone on the front
-- A LiPo battery up to 50.5 x 34 x 9.9 mm, rated to charge at 1C (the board charges at 2 A), with a JST 1.25 plug
-- Two MAX98357A amplifier boards
-- A USB-C breakout with 5.1k resistors from CC1 and CC2 to GND
-- The J9 header adapter in [`header_adapter`](header_adapter/), with its JST SH socket and 10k resistor, and a 10-pin JST SH cable (A10SR10SR30K102A, 4") cut near one end
-- Two 220 uF 10 V low-ESR electrolytic capacitors, 6.3 mm diameter
-- M2 socket head screws: four M2 x 8 for the back, four M2 x 6 for the washer, and six M2 x 10 with nuts and washers for the boards
+| Screws | How many | Where they go |
+|---|---|---|
+| M2 countersunk, about M2 x 5 | 3 | Through the display cup's back plate into the standoffs on the back of the board, from inside the chamber.  Their heads sit flush. |
+| M2 x 10 socket head, with nuts and washers | 6 | Hold the two amplifiers and the USB-C breakout to the back: each goes through the back from outside, its head in a counterbore, then through a spacer and the board, with a nut on top. |
+| M2 x 8 socket head | 4 | Hold the back onto the body.  They cut their own thread in the body. |
+| M2 x 6 socket head | 4 | Hold the two halves of the washer to the ends of the collar's posts, inside the collar.  Stop when the collar turns firmly but smoothly. |
 
-### Putting it together
+## Charge current
 
-1. Solder the header adapter onto the board's 2x10 header (see its README).  Push the plungers in from inside the display's pocket, then fit the board.
-2. Stick each speaker into its pocket from the back.  The adhesive frame on its front holds it to the grille.
-3. Screw the amplifiers and the USB-C breakout to the back: each M2 x 10 goes through the back from outside, then a spacer, the board and a nut.  Tape the battery to the back with its leads at the upper left, seen from the front (upper right from the back), next to the board's battery socket.
-4. Wire it up, then screw the back on with the M2 x 8 screws.
-5. Put the gasket over the posts, then the collar, grip first.
-6. Drop each half of the washer in through the threaded end, line its holes up with two posts, and screw it down with M2 x 6 screws.  Stop when the collar turns firmly but smoothly.
+The board charges its battery at up to 2 A, set by R8 (82k) next to its charger chip.  That's more than either housing's battery should take, so it's worth changing R8 to a higher value.  The charge current is roughly 165 kΩ·A divided by R8:
 
-### Wiring
-
-Everything but the battery connects through the JST SH socket on the header adapter.  The plug goes in from the space below the battery.  The battery plugs into the board's own battery socket.
-
-| SH pin | Signal | Header pin | Goes to |
+| Housing | Battery | Suggested R8 | Charge current |
 |---|---|---|---|
-| 1 | GND | 3, 4, 12 | USB-C breakout GND |
-| 2 | BAT | 2 | Vin on both amplifiers |
-| 3, 4 | USB_5V | 1 | USB-C breakout VBUS |
-| 5 | GND | 3, 4, 12 | USB-C breakout GND |
-| 6 | GND | 3, 4, 12 | GND on both amplifiers |
-| 7 | SD (GPIO1) | 11 | SD on both amplifiers.  The 10k resistor to GND is on the adapter. |
-| 8 | DIN (GPIO3) | 13 | DIN on both amplifiers |
-| 9 | LRC (GPIO13) | 20 | LRC on both amplifiers |
-| 10 | BCLK (GPIO12) | 18 | BCLK on both amplifiers |
+| Simple housing | 702030, about 400 mAh | 390k | about 0.4 A |
+| Speaker housing | 2000 mAh | 180k | about 0.9 A |
 
-Wire each amplifier signal to the first amplifier, then run a short wire from there to the same pad on the second one, so nothing needs splicing.
+In the speaker housing, the charging current also goes through the header adapter's SH socket, which shares it over two pins each way, at about 1 A a pin.  At 2 A that's right at their rating, so 0.9 A leaves plenty of margin.
 
-- Each speaker connects to its amplifier's + and - outputs, neither of which is ground.  Leave GAIN unconnected.
-- BAT is connected straight to the battery, so the 10k resistor keeps the amplifiers switched off while the board is off.
-- Put a 220 uF capacitor across Vin and GND at each amplifier, stripe to GND.  Lay it on its side, as standing up it nearly touches the back of the speaker.
-- Don't plug into the board's own USB-C port and the housing's at the same time.
-- To take the board out for a firmware update, take the back off, unplug the SH cable and then the battery, then take out the board's three screws and push it out the front.  The adapter comes with it.
-- The firmware sends the sound to the amplifiers when `RCAT_SPEAKER` is `EXTERNAL` in `platforms/esp-idf/features.cmake`, which is the default.  It switches them on with SD only while sound is playing.
+R8 is a tiny 0201 part, so changing it is fine soldering work.  Measure the charge current with a USB meter afterwards.
+
+## Test prints
+
+You don't need to print these to build a housing: the design's already been checked and tuned with them.  They're for checking the fit on a different printer or with a different material, before printing a whole housing.  Render them with `./render.sh tests`.
+
+- **`fit_test`** - The simple housing without the thread, to check the openings and buttons with the board fitted.
+- **`lens_fit`** - The front 3 mm of the simple housing's cup.  The board's glass should drop in with a little play, but not rattle.  If it doesn't, adjust `clearance`.
+- **`thread_test`** - Three thin thread rings at 99.4%, 99.7% and 100% of the original thread's diameter, numbered 1 to 3 by notches on the rim.  99.7% fit best, which is what `thread_scale` is set to (98% was too loose and 102% too tight).  `thread_scale` and the thread's beveled start, `thread_lead_in`, are in `../../masks/msa_millennium/voice_port.scad`, so they change the thread for every board's housing.
+- **`pod_test`** - One of the speaker housing's pods on its own, to check the speaker's fit.
+- **`plunger_test`** - The speaker housing's plungers in three lengths, two of each, standing 1.3, 1.8 and 2.3 mm out of the housing.  `plunger_proud` is set to the one that worked best.
+
+## Files
+
+- `msa_housing.scad` - The simple housing, in OpenSCAD.  All of the dimensions are named settings at the top.
+- `msa_speaker_housing.scad` - The speaker housing.
+- `board.scad` - The board's dimensions, shared by both housings.
+- `render.sh` - Renders the parts to STL files.
+- `header_adapter/` - The J9 header adapter PCB for the speaker housing: its KiCad files, Gerbers and 3D model.
+- `travel_case/` - A case to carry the simple housing in.
+
+The MSA voice port thread, the speaker housing's turning collar and the thread test rings are shared with the other boards' housings, in [`../../masks/msa_millennium`](../../masks/msa_millennium/).
 
 ## Travel case
 
-There's a hinged case to carry the housing in, in [`travel_case`](travel_case/).
+There's a hinged case to carry the simple housing in, in [`travel_case`](travel_case/).
 
 ## Credits and License
 

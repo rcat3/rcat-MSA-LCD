@@ -2,6 +2,8 @@
 
 A small PCB that solders onto the 2x10, 1.27 mm pin header (J9) on the back of the Waveshare ESP32-S3-Touch-LCD-1.46. It replaces the ribbon cable in the speaker housing (`../msa_speaker_housing.scad`). All the wiring to the back of the housing plugs into one 10-pin JST SH socket on it. To take the board out for a firmware update, you unplug that socket and the battery, and nothing has to be cut or desoldered.
 
+It's used in the 1.46" speaker housing: see the [build guide](../../../../docs/hardware/waveshare_esp32s3_touch_lcd_1_46.md#the-speaker-housing) for the rest of the wiring.
+
 **Status: not built yet.**  The layout passes KiCad's design rules check. It hasn't been fitted.
 
 The first version (in the commit that added this folder) had the header's two rows swapped, a mirror image of the real header, so every pad sat on the other pin of its pair.  Don't fit a board from those Gerbers: it would connect the USB 5V to the battery.  This version has pin 1's row along the edge, next to the socket, and was checked pin by pin against the board's silkscreen.
@@ -42,7 +44,7 @@ Pin 1 of the socket is the end nearest pin 1 of the header.
 | 9 | LRC (GPIO13) | 20 | Amplifier LRC, then on to the other amplifier |
 | 10 | BCLK (GPIO12) | 18 | Amplifier BCLK, then on to the other amplifier |
 
-Each SH contact is rated for about 1 A, so the charging current shares two pins each way.  At the board's 2 A charge rate that's right at the rating.  If you'd like more margin, change R8 on the Waveshare board to about 190k, which charges at about 1 A.
+Each SH contact is rated for about 1 A, so the charging current shares two pins each way.  At the board's 2 A charge rate that's right at the rating.  For more margin, change R8 on the Waveshare board to about 180k, which charges at about 0.9 A (see [Charge current](../README.md#charge-current)).
 
 Wire each amplifier signal to the first amplifier's pad. Then run a short wire from that pad to the same pad on the second amplifier, with two wires in the one hole.  Keep the 220 uF capacitor across Vin and GND at each amplifier.
 
