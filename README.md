@@ -1,4 +1,4 @@
-# Rubbercat's MSA Millennium LCD Screen Software (rcat-MSA-LCD)
+# DroneLab
 
 This project features firmware and 3D printable housings for small round Waveshare touch displays.  While primarily intended to screw into the voice port on the front of an MSA Millennium gas mask, this ecosystem was designed to be flexible.  The immediate audience will be "latex drones" desiring slick high-tech accessories for their gas mask.  Though cosplayers and other costume designers might find the project suits their needs as well.  
 

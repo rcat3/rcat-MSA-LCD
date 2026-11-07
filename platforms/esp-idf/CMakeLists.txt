@@ -42,4 +42,4 @@ idf_build_set_property(RCAT_LARGE_IMAGES "${RCAT_LARGE_IMAGES}")
 # lv_conf.h lives in config/ (LVGL finds it with LV_CONF_INCLUDE_SIMPLE).
 idf_build_set_property(COMPILE_OPTIONS "-I${CMAKE_CURRENT_LIST_DIR}/config" APPEND)
 
-project(rcat-msa-lcd)
+project(dronelab)

@@ -11,7 +11,7 @@ The same firmware builds for every supported board.  The RP2040 and RP2350 board
 LVGL and the sound file decoders are included as git submodules, so clone with `--recursive`:
 
 ```
-git clone --recursive https://github.com/rcat3/rcat-MSA-LCD.git
+git clone --recursive https://github.com/rcat3/DroneLab.git
 ```
 
 If you already cloned without it, run `git submodule update --init` inside the repo.
@@ -52,7 +52,7 @@ cmake -S platforms/pico -B build-rp2040 -DBOARD=waveshare_rp2040_touch_lcd_1_28
 cmake --build build-rp2040 -j
 ```
 
-When it's done, the firmware is `rcat-msa-lcd.uf2` in the build folder.
+When it's done, the firmware is `dronelab.uf2` in the build folder.
 
 If CMake complains that `PICO_PLATFORM` doesn't match the board, the build folder was set up for the other board.  Use the other board's folder, or delete the folder and run the `cmake -S` command again.
 
@@ -61,7 +61,7 @@ If CMake complains that `PICO_PLATFORM` doesn't match the board, the build folde
 Either way works:
 
 - **With the buttons:** connect the board's USB-C port to your computer.  Hold `BOOT`, press and release `RESET`, then release `BOOT`.  The screen goes off, and a USB drive appears on the computer.  Copy the `.uf2` file onto it.  When the copy's done, the board restarts with the new firmware.
-- **Without the buttons**, if [picotool](https://github.com/raspberrypi/picotool) is installed and the board is already running this firmware: `picotool load -f -x build-rp2350/rcat-msa-lcd.uf2`.  The `-f` restarts the board into its programming mode by itself, so this works with the board in its housing.
+- **Without the buttons**, if [picotool](https://github.com/raspberrypi/picotool) is installed and the board is already running this firmware: `picotool load -f -x build-rp2350/dronelab.uf2`.  The `-f` restarts the board into its programming mode by itself, so this works with the board in its housing.
 
 ## ESP32-S3 boards
 

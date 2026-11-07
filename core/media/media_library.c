@@ -10,7 +10,7 @@
  *   scaled while they're drawn. That costs some time on every frame, so
  *   tools/prepare_sd.py can write screen sized copies instead.
  *
- * Files written by tools/prepare_sd.py contain "rcat-msa-lcd:prepared:<size>"
+ * Files written by tools/prepare_sd.py contain "dronelab:prepared:<size>"
  * near the start. They're already sized for a <size> screen, which is used
  * as the reference instead of the usual sizing rule, so they aren't scaled
  * again.
@@ -46,7 +46,9 @@
 // LVGL's drive letter for the C library file functions (LV_USE_FS_STDIO)
 #define LVGL_DRIVE          "S:"
 
-#define PREPARED_MARKER     "rcat-msa-lcd:prepared:"
+// The marker prepare_sd.py writes, and the one it wrote before the project
+// was called DroneLab, so cards prepared then still work
+static const char *const prepared_markers[] = { "dronelab:prepared:", "rcat-msa-lcd:prepared:" };
 #define MARKER_SEARCH_BYTES 4096
 
 static media_item_t *items;
@@ -127,12 +129,15 @@ static bool is_image_file(const char *file_name)
 /* The screen size a file was prepared for by tools/prepare_sd.py, or 0. */
 static int32_t prepared_size_in(const uint8_t *data, size_t len)
 {
-    size_t marker_len = strlen(PREPARED_MARKER);
-    for (size_t i = 0; i + marker_len < len; i++)
+    for (size_t m = 0; m < sizeof(prepared_markers) / sizeof(prepared_markers[0]); m++)
     {
-        if (memcmp(data + i, PREPARED_MARKER, marker_len) == 0)
+        size_t marker_len = strlen(prepared_markers[m]);
+        for (size_t i = 0; i + marker_len < len; i++)
         {
-            return atoi((const char *)data + i + marker_len);
+            if (memcmp(data + i, prepared_markers[m], marker_len) == 0)
+            {
+                return atoi((const char *)data + i + marker_len);
+            }
         }
     }
     return 0;

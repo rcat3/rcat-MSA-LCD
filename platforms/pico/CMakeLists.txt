@@ -29,7 +29,7 @@ if (PICO_SDK_VERSION_STRING VERSION_LESS "1.4.0")
   message(FATAL_ERROR "Raspberry Pi Pico SDK version 1.4.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
 
-project(rcat-msa-lcd C CXX ASM)
+project(dronelab C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
@@ -65,14 +65,14 @@ target_link_libraries(board PUBLIC
     pico_flash
 )
 
-add_executable(rcat-msa-lcd main.c)
+add_executable(dronelab main.c)
 
-pico_set_program_name(rcat-msa-lcd "rcat-msa-lcd")
-pico_set_program_version(rcat-msa-lcd "0.3")
+pico_set_program_name(dronelab "DroneLab")
+pico_set_program_version(dronelab "0.3")
 
-pico_enable_stdio_uart(rcat-msa-lcd 0)
-pico_enable_stdio_usb(rcat-msa-lcd 1)
+pico_enable_stdio_uart(dronelab 0)
+pico_enable_stdio_usb(dronelab 1)
 
-target_link_libraries(rcat-msa-lcd rcat_core board)
+target_link_libraries(dronelab rcat_core board)
 
-pico_add_extra_outputs(rcat-msa-lcd)
+pico_add_extra_outputs(dronelab)

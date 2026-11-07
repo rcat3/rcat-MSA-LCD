@@ -5,7 +5,7 @@
 The *Phone Remote* page, the last one in [Settings](settings.md), lets people run the display from a phone's web browser, so nobody has to reach the display in the mask.  They can pick what it shows, control the [Lovense](lovense.md) devices, and type messages onto the [Terminal](terminal.md).  The phone needs no app.
 
 1. Connect the devices on the display first (the Lovense feature's Devices page).  The phone can connect them too, but the display is quicker.
-2. On the *Phone Remote* page, switch it on.  The board starts a WiFi hotspot of its own, called `RCAT-` and four letters, and shows a QR code with its name and password under it.
+2. On the *Phone Remote* page, switch it on.  The board starts a WiFi hotspot of its own, called `DroneLab-` and four letters, and shows a QR code with its name and password under it.
 3. On the phone, point the camera at the QR code and tap *Join*.  (Or join the network in the phone's WiFi settings and type the password.)
 4. The remote's page opens on its own after a few seconds, the way a hotel's WiFi sign-in page does.  If it doesn't, open `http://192.168.4.1` in the phone's browser.
 

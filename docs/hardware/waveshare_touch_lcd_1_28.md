@@ -77,7 +77,7 @@ cmake --build build-rp2350 -j
 
 For the RP2040 board, use `build-rp2040` and `waveshare_rp2040_touch_lcd_1_28`.
 
-To flash it with the board in the housing, plug in the USB-C cable and run `picotool load -f -x build-rp2350/rcat-msa-lcd.uf2`.  The `-f` restarts the board into its programming mode by itself, so you don't have to reach the `BOOT` button.  The first time, before this firmware is on the board, hold `BOOT` while pressing `RESET` and copy the `.uf2` file onto the USB drive that appears.
+To flash it with the board in the housing, plug in the USB-C cable and run `picotool load -f -x build-rp2350/dronelab.uf2`.  The `-f` restarts the board into its programming mode by itself, so you don't have to reach the `BOOT` button.  The first time, before this firmware is on the board, hold `BOOT` while pressing `RESET` and copy the `.uf2` file onto the USB drive that appears.
 
 ## After it's built
 

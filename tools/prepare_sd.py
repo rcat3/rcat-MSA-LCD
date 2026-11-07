@@ -13,7 +13,7 @@ transparency. This writes copies that are ready to go:
 
 Sizing works the same as for the built-in images: images up to 240x240 are
 scaled by the screen size / 240, and bigger images are fitted to the screen.
-Each file gets a small marker ("rcat-msa-lcd:prepared:<size>") so the display
+Each file gets a small marker ("dronelab:prepared:<size>") so the display
 knows it's already sized and doesn't scale it again.
 
 Usage:
@@ -51,7 +51,7 @@ def main():
             print(f"skipping {path}: {e}")
             continue
 
-        marker = f"rcat-msa-lcd:prepared:{args.size}"
+        marker = f"dronelab:prepared:{args.size}"
         w, h = scaled_size(*img.size, args.size)
         if img.format == "GIF":
             out_path = os.path.join(args.out, name + ".gif")

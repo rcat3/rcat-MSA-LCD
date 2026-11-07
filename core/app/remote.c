@@ -128,12 +128,14 @@ static void make_credentials(bool new_name)
     snprintf(ssid, sizeof(ssid), "%s", s->remote_ssid);
     if (new_name || ssid[0] == '\0')
     {
-        strcpy(ssid, "RCAT-");
+        static const char prefix[] = "DroneLab-";
+        size_t n = sizeof(prefix) - 1;
+        memcpy(ssid, prefix, n);
         for (int i = 0; i < 4; i++)
         {
-            ssid[5 + i] = random_char("ABCDEFGHJKMNPQRSTUVWXYZ23456789");
+            ssid[n + i] = random_char("ABCDEFGHJKMNPQRSTUVWXYZ23456789");
         }
-        ssid[9] = '\0';
+        ssid[n + 4] = '\0';
     }
     for (int i = 0; i < PASSWORD_LEN; i++)
     {
