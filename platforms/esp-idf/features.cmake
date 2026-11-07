@@ -8,7 +8,7 @@ set(RCAT_FEATURE_LEVEL  ON)     # spirit level, for lining the display up on the
 set(RCAT_FEATURE_LOVENSE ON)    # controls a Lovense device over Bluetooth
 set(RCAT_FEATURE_TERMINAL ON)   # green screen text, typed in on the Lovense feature's phone remote
 
-# Where the sound goes: BUILT_IN for the board's own speaker, or EXTERNAL for
-# amplifiers wired to its expansion header (see
+# Where the ESP32-S3-Touch-LCD-1.46's sound goes: BUILT_IN for the board's own
+# speaker, or EXTERNAL for amplifiers wired to its expansion header (see
 # hardware/boards/waveshare_esp32s3_touch_lcd_1_46/README.md).
 set(RCAT_SPEAKER EXTERNAL)

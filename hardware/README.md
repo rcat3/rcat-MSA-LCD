@@ -7,7 +7,7 @@
 | Board | Firmware | Housings for the MSA Millennium | Other hardware |
 |---|---|---|---|
 | [Waveshare ESP32-S3-Touch-LCD-1.46](boards/waveshare_esp32s3_touch_lcd_1_46/) (with cover glass) | Yes | Simple housing; speaker housing with two speakers | J9 header adapter PCB, travel case |
-| [Waveshare ESP32-S3-Touch-AMOLED-1.75](boards/waveshare_esp32s3_touch_amoled_1_75/) | Not yet | Speaker housing with one speaker below the display (draft, not yet printed) | |
+| [Waveshare ESP32-S3-Touch-AMOLED-1.75](boards/waveshare_esp32s3_touch_amoled_1_75/) | Yes (not yet tested on the board) | Speaker housing with one speaker below the display (draft, not yet printed) | |
 | Waveshare RP2040 / RP2350 Touch LCD 1.28 | Yes | [RP2040-LCD-1.28-MSA](https://www.printables.com/model/538771-rp2040-lcd-128-msa) by whyrlpool (not in this repository) | |
 
 ## How it's organized

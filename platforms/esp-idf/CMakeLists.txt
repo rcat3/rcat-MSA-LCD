@@ -1,8 +1,9 @@
 # ESP-IDF build for the ESP32 based boards.
 #
 #   idf.py -C platforms/esp-idf -B build-s3-146 -DBOARD=waveshare_esp32s3_touch_lcd_1_46 build
+#   idf.py -C platforms/esp-idf -B build-s3-175 -DBOARD=waveshare_esp32s3_touch_amoled_1_75 build
 #
-# See boards/ for the supported boards.
+# See boards/ for the supported boards. What they share is in components/rcat_esp32.
 
 cmake_minimum_required(VERSION 3.16)
 

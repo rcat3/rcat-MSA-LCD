@@ -11,6 +11,7 @@ Supported boards:
 | [Waveshare RP2040-Touch-LCD-1.28](https://www.amazon.com/dp/B0C4LRRVVN) | 240x240 round | 264kB of RAM.  Fine for static images, limited for animated GIFs. |
 | [Waveshare RP2350-Touch-LCD-1.28](https://www.amazon.com/dp/B0DLBF5QKK) | 240x240 round | 520kB of RAM.  Same price as the RP2040 version, so I'd recommend this one. |
 | [Waveshare ESP32-S3-Touch-LCD-1.46](https://docs.waveshare.com/ESP32-S3-Touch-LCD-1.46) | 412x412 round | 8MB of PSRAM, microphone, speaker, TF card slot, WiFi and Bluetooth.  See [the ESP32-S3 notes](#esp32-s3-touch-lcd-146-notes) below. |
+| [Waveshare ESP32-S3-Touch-AMOLED-1.75](https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75) | 466x466 round AMOLED | Like the 1.46", plus two microphones, a speaker amplifier and a battery charger on the board.  **New, and not yet tested on the board.**  See [its notes](#esp32-s3-touch-amoled-175-notes) below. |
 
 The two 1.28" boards are the ones used in the MSA mask build described next.
 
@@ -63,6 +64,20 @@ The KITT bars and the voice ring adjust to the surroundings on their own.  A qui
 - **Bluetooth:** used by the Lovense feature.  It starts the first time you tap Connect.
 - **Not used yet:** the clock chip.
 - **Housing:** there's a 3D printable housing for this board, and a travel case for it, in [`hardware/boards/waveshare_esp32s3_touch_lcd_1_46`](hardware/boards/waveshare_esp32s3_touch_lcd_1_46/).  See [`hardware/`](hardware/) for what fits which board.
+
+### ESP32-S3-Touch-AMOLED-1.75 Notes
+
+Support for this board is new and hasn't been tried on the board yet, so expect a few things to need adjusting.  It has everything the 1.46" board has, and the same features run on it.
+
+- **Power:** The board runs from USB-C or from a 3.7V LiPo battery on its MX1.25 connector (check the polarity before plugging a battery in), and charges the battery at 300 mA.  Press `PWR` to turn it on, and hold it for 2 seconds to turn it off.
+- **Images** are converted for the 466x466 screen automatically when you build.
+- **Brightness:** an AMOLED has no backlight, so the Brightness setting dims the screen itself.  Black parts of the picture are truly off.
+- **Rotation:** in the [speaker housing](hardware/boards/waveshare_esp32s3_touch_amoled_1_75/), the board is turned a quarter turn, so set Rotation to 90 degrees.
+- **Microphones:** the board's two microphones are mixed together.  The gain is `MIC_GAIN_DB` in the board's `hal_board.c`.
+- **Speaker:** the board has its own amplifier and speaker socket.  The microphones and the speaker share one audio clock, so sound is resampled to 32 kHz for the speaker, which is plenty for a small speaker.  `SPK_VOLUME` in `hal_board.c` sets how loud the board's amplifier goes, on top of the volume setting.
+- **Level:** the accelerometer's axes are taken from the 1.46" board and haven't been checked on this one.  If the level reads the wrong way, see `rcat_hal_accel_read()` in `hal_board.c`.
+- **Not used yet:** the clock chip, and the GPS on the -G version.
+- **Housing:** there's a 3D printable speaker housing for this board in [`hardware/boards/waveshare_esp32s3_touch_amoled_1_75`](hardware/boards/waveshare_esp32s3_touch_amoled_1_75/).
 
 ## Software
 
@@ -120,7 +135,7 @@ If you switch between boards, delete the `build` folder first (or use a differen
 
 Connect the USB-C port of the RP2040 to your computer.  To flash a new image onto the hardware, press and hold the `BOOT` button.  Press and release `RESET`.  Now you can release `BOOT`.  The screen should be off.  A mass storage device should appear on the computer.  Copy the .uf2 file to this mass storage device.  When copying is complete, the RP2040 should reset and begin running the new image.
 
-### Building for the ESP32-S3 board
+### Building for the ESP32-S3 boards
 
 #### Installing ESP-IDF
 
@@ -149,11 +164,19 @@ python -m pip install pillow
 
 From the top of the repo:
 
+For the ESP32-S3-Touch-LCD-1.46:
+
 ```
 idf.py -C platforms/esp-idf -B build-s3-146 -DBOARD=waveshare_esp32s3_touch_lcd_1_46 build
 ```
 
-The first build downloads the display and touch drivers from Espressif's component registry.
+For the ESP32-S3-Touch-AMOLED-1.75:
+
+```
+idf.py -C platforms/esp-idf -B build-s3-175 -DBOARD=waveshare_esp32s3_touch_amoled_1_75 build
+```
+
+Give each board its own build folder, as here.  The first build downloads the board's display, touch and audio drivers from Espressif's component registry.  The examples below are for the 1.46"; for the 1.75" use `build-s3-175` instead.
 
 #### Flashing
 
@@ -205,7 +228,7 @@ The image name is also what shows up in the *Startup* setting.  To remove an ima
 
 ### Images on the SD Card (ESP32-S3 board)
 
-The ESP32-S3 board can also show images from its TF (micro SD) card, so you can change them without rebuilding the firmware.
+The ESP32-S3 boards can also show images from their TF (micro SD) card, so you can change them without rebuilding the firmware.
 
 1. Format the card as FAT32 (most cards come that way) and make a folder called `images` on it.  If there's no `images` folder, the top level of the card is used instead.
 2. Copy PNG, JPG, BMP or animated GIF files into it.
@@ -219,7 +242,7 @@ Images are sized for the screen the same way as the built-in images (see below).
 python3 tools/prepare_sd.py my_images/*.gif my_images/*.png --size 412 --out /media/you/SDCARD/images
 ```
 
-Use the path where your card is mounted.  `--size 412` is the screen size of the ESP32-S3 board.
+Use the path where your card is mounted.  `--size` is the board's screen size: 412 for the ESP32-S3-Touch-LCD-1.46, or 466 for the ESP32-S3-Touch-AMOLED-1.75.
 
 Limits:
 - Up to 32 images are loaded from the card.
@@ -354,7 +377,7 @@ The ESP32-S3 board decodes GIFs into its 8MB of PSRAM, so even full screen GIFs 
 - `core/include/hal.h` - The small set of functions each board has to provide (display, touch, backlight, battery, settings storage, microphone, speaker, SD card, WiFi, Bluetooth).
 - `core/features.cmake` - The list of optional features.  Each platform's `features.cmake` picks which ones to build.
 - `platforms/pico/` - Build files for the Raspberry Pi RP2040/RP2350 boards.  `boards/*.cmake` lists the supported boards, and `boards/touch_lcd_1_28/` has the Waveshare drivers for the 1.28" round display.
-- `platforms/esp-idf/` - Build files for the ESP32 boards.  `boards/` has one folder per board with its drivers, pin assignments and settings.
+- `platforms/esp-idf/` - Build files for the ESP32 boards.  `boards/` has one folder per board with its drivers, pin assignments and settings, and `components/rcat_esp32/` has the parts of the HAL that are the same on all of them (WiFi, the hotspot, Bluetooth LE, settings, the SD card and the IMU).
 - `third_party/lvgl/` - The [LVGL](https://lvgl.io) graphics library (git submodule).
 - `third_party/dr_libs/` - The [dr_libs](https://github.com/mackron/dr_libs) WAV, MP3 and FLAC decoders (git submodule).
 - `tools/img2c.py` - Converts images and GIFs into C files.  The build runs it for every image in `imgs/`.
@@ -385,7 +408,7 @@ Code in `core/` never includes anything from pico-sdk or ESP-IDF.  It reaches th
 To add one:
 
 1. Declare it in `hal.h`, with a comment saying what it does and what it returns when the board can't do it.
-2. Implement it in every board's `hal_board.c`, under `platforms/esp-idf/boards/` and `platforms/pico/boards/`.  A board without the hardware just returns `false` (or does nothing), and the feature using it hides itself.
+2. Implement it in every board's `hal_board.c`, under `platforms/esp-idf/boards/` and `platforms/pico/boards/`, or once for all the ESP32 boards in `platforms/esp-idf/components/rcat_esp32/` if it doesn't depend on the board.  A board without the hardware just returns `false` (or does nothing), and the feature using it hides itself.
 
 The UI runs on a single LVGL loop.  Microphone and speaker callbacks run on the board's audio tasks, so they mustn't call LVGL.
 
@@ -396,4 +419,4 @@ The UI runs on a single LVGL loop.  Microphone and speaker callbacks run on the 
 
 ### Checking a change
 
-Build every platform the change touches, using the commands in [Building for the RP2040/RP2350 boards](#building-for-the-rp2040rp2350-boards) and [Building for the ESP32-S3 board](#building-for-the-esp32-s3-board).  A change to `core/` or `hal.h` touches all of them.  Both builds should finish without warnings.  It's also worth building once with the new feature switched off.
+Build every platform the change touches, using the commands in [Building for the RP2040/RP2350 boards](#building-for-the-rp2040rp2350-boards) and [Building for the ESP32-S3 boards](#building-for-the-esp32-s3-boards).  A change to `core/` or `hal.h` touches all of them.  Both builds should finish without warnings.  It's also worth building once with the new feature switched off.

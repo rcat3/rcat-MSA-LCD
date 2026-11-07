@@ -2,14 +2,14 @@
 
 A 3D printable housing that screws the [Waveshare ESP32-S3-Touch-AMOLED-1.75](https://www.waveshare.com/esp32-s3-touch-amoled-1.75.htm) into the voice port of an MSA Millennium mask, with a speaker in a pod below the display and a battery in a chamber behind it.  It's for the bare board, not the -B version that comes in its own case.
 
-**Status: draft, not yet printed.**  It's modeled from Waveshare's 3D model and drawing of the board, and its clearance from the mask from a 3D scan.  The firmware doesn't support this board yet.
+**Status: draft, not yet printed.**  It's modeled from Waveshare's 3D model and drawing of the board, and its clearance from the mask from a 3D scan.  The firmware supports it, but hasn't been tried on the board yet either.
 
 The board has its own amplifier, speaker socket, microphones and battery charger, so the speaker and the battery plug straight into it.  There are no other boards to wire in.
 
 ## How it goes together
 
 - The board sits in a cup at the front, with its glass flush with the front, and screws to the cup's back plate with three M2 countersunk screws (about M2 x 5) into the standoffs on its back.
-- It's turned a quarter turn from its usual way up, so its USB-C port faces right, out through the side of the housing.  The port is in a pocket in the side, only about 3 mm behind the pocket's floor, so any cable's plug reaches it, not just the slimmest.  Its side buttons and micro SD slot are on the left, and its pin header is at the top.  Set the display's rotation to match in the settings.
+- It's turned a quarter turn from its usual way up, so its USB-C port faces right, out through the side of the housing.  The port is in a pocket in the side, only about 3 mm behind the pocket's floor, so any cable's plug reaches it, not just the slimmest.  Its side buttons and micro SD slot are on the left, and its pin header is at the top.  Set Rotation to 90 degrees in the settings to match.
 - The speaker sits in a shallow pod below the display.  Right below the voice port is the mask's filter mount, so the pod is only as deep as the speaker needs, and the **chin** behind it slopes back to the body, over the mount.  From the scan, the chin clears the mount by about 4.7 mm at its closest, at the mount's top edge, and the pod by about 8 mm.
 - The speaker goes in from the back of the pod before the chin goes on, and the adhesive frame on its front sticks it to the grille.  Its wire runs in a 2 mm gap behind it, into the chamber, to the board's speaker socket.
 - The chamber behind the board holds a 2000 mAh battery, taped to the back.  The board's speaker and battery sockets stand up off the back of the board, and their plugs go in through openings in the back plate, from the chamber.

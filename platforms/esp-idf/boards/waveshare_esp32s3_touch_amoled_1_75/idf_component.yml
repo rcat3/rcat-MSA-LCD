@@ -1,0 +1,6 @@
+dependencies:
+  idf: ">=5.5"
+  espressif/esp_lcd_co5300: "^2.2.0"
+  waveshare/esp_lcd_touch_cst9217: "^2.0.0"
+  espressif/esp_io_expander_tca9554: "^2.0.3"
+  espressif/esp_codec_dev: "~1.6.2"
