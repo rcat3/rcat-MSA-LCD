@@ -73,15 +73,9 @@ In [`hardware/boards/waveshare_esp32s3_touch_lcd_1_46`](../../hardware/boards/wa
 
 Everything but the battery connects through the socket on the header adapter.  The battery plugs into the board's own battery socket.
 
-```mermaid
-flowchart LR
-    battery["2000 mAh LiPo"] --> board["ESP32-S3-Touch-LCD-1.46<br>with the header adapter"]
-    usb["USB-C breakout"] -- "5V, GND" --> board
-    board -- "BAT, GND, SD, DIN, LRC, BCLK" --> amp1["MAX98357A"]
-    amp1 -- "same signals" --> amp2["MAX98357A"]
-    amp1 -- "+, -" --> spk1["Left speaker"]
-    amp2 -- "+, -" --> spk2["Right speaker"]
-```
+![Wiring diagram for the speaker housing](../images/wiring_speaker_housing_1_46.svg)
+
+Dots are joints, and wires that cross without a dot don't touch.  The two amplifiers are wired in parallel: each signal from the socket goes to both.
 
 | SH pin | Signal | Header pin | Goes to |
 |---|---|---|---|
@@ -100,6 +94,9 @@ flowchart LR
 - BAT is connected straight to the battery, so the 10k resistor keeps the amplifiers switched off while the board is off.
 - Put a 220 uF capacitor across Vin and GND at each amplifier, stripe to GND.  Lay it on its side, as standing up it nearly touches the back of the speaker.
 - Don't plug into the board's own USB-C port and the housing's at the same time.
+- Check that the USB-C breakout reads about 5.1k from CC1 to GND and from CC2 to GND, or chargers won't turn on.
+- Keep the I2S wires (LRC, BCLK, DIN) short and run them beside a ground wire, away from the speaker leads.  If you hear crackling, add a 33-47 ohm resistor in series with BCLK.
+- Cover every joint with heat shrink.  A short on BAT goes straight to the battery.
 
 ### Putting it together
 

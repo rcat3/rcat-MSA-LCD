@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 660" width="920" height="660" role="img" aria-labelledby="title">
+  <title id="title">Wiring the 1.46" speaker housing: the header adapter's SH socket to two MAX98357A amplifiers and the USB-C breakout; the battery to the board's battery socket</title>
+  <style>
+    text { font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace; fill: #18211f; }
+    .box { fill: #eef2f1; stroke: #18211f; stroke-width: 1.5; }
+    .sub { fill: #ffffff; stroke: #c8d1ce; stroke-width: 1.2; }
+    .title { font-family: "DejaVu Sans", Helvetica, Arial, sans-serif; font-weight: 700; font-size: 14px; }
+    .small { font-size: 11px; fill: #586562; }
+    .pin { font-size: 12px; }
+    .wire { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .c-bat { stroke: #c2281f; } .f-bat { fill: #c2281f; }
+    .c-usb { stroke: #d4610a; } .f-usb { fill: #d4610a; }
+    .c-gnd { stroke: #2b3331; } .f-gnd { fill: #2b3331; }
+    .c-lrc { stroke: #a8790a; } .f-lrc { fill: #a8790a; }
+    .c-bclk { stroke: #0d8a7c; } .f-bclk { fill: #0d8a7c; }
+    .c-din { stroke: #2958c8; } .f-din { fill: #2958c8; }
+    .c-sd { stroke: #8a3fb8; } .f-sd { fill: #8a3fb8; }
+    .c-spk { stroke: #6b5a4e; }
+  </style>
+  <rect width="920" height="660" fill="#ffffff"/>
+
+  <!-- Board with the header adapter -->
+  <rect class="box" x="20" y="30" width="230" height="390" rx="6"/>
+  <text class="title" x="36" y="56">1.46" board</text>
+  <text class="small" x="36" y="74">header adapter's SH socket</text>
+  <rect class="sub" x="150" y="80" width="100" height="270"/>
+  <g class="pin" text-anchor="end">
+    <text x="242" y="94">9 LRC</text>
+    <text x="242" y="124">10 BCLK</text>
+    <text x="242" y="154">8 DIN</text>
+    <text x="242" y="184">7 SD</text>
+    <text x="242" y="214">6 GND</text>
+    <text x="242" y="254">2 BAT</text>
+    <text x="242" y="304">3, 4 5V</text>
+    <text x="242" y="334">1, 5 GND</text>
+  </g>
+  <text class="small" x="36" y="184">10 kΩ SD to GND</text>
+  <text class="small" x="36" y="200">is on the adapter</text>
+  <rect class="sub" x="60" y="370" width="120" height="34"/>
+  <text class="pin" x="72" y="392">battery socket</text>
+
+  <!-- Battery -->
+  <rect class="box" x="40" y="480" width="160" height="60" rx="4"/>
+  <text class="title" x="56" y="508">Battery</text>
+  <text class="small" x="56" y="526">2000 mAh · JST 1.25 plug</text>
+  <path class="wire c-bat" d="M100 404 V480"/>
+  <path class="wire c-gnd" d="M140 404 V480"/>
+  <text class="small" x="104" y="448">+</text>
+  <text class="small" x="144" y="448">−</text>
+
+  <!-- Signals to both amplifiers -->
+  <path class="wire c-lrc"  d="M250 90 H480 V340 H600 M480 80 H600"/>
+  <path class="wire c-bclk" d="M250 120 H450 V368 H600 M450 108 H600"/>
+  <path class="wire c-din"  d="M250 150 H420 V396 H600 M420 136 H600"/>
+  <path class="wire c-sd"   d="M250 180 H390 V452 H600 M390 192 H600"/>
+  <path class="wire c-gnd"  d="M250 210 H360 V480 H600 M360 220 H600"/>
+  <path class="wire c-bat"  d="M250 250 H330 V508 H600 M330 248 H600"/>
+  <g>
+    <circle class="f-lrc" cx="480" cy="90" r="4"/>
+    <circle class="f-bclk" cx="450" cy="120" r="4"/>
+    <circle class="f-din" cx="420" cy="136" r="4"/>
+    <circle class="f-sd" cx="390" cy="192" r="4"/>
+    <circle class="f-gnd" cx="360" cy="220" r="4"/>
+    <circle class="f-bat" cx="330" cy="250" r="4"/>
+  </g>
+  <g class="small">
+    <text x="258" y="85">GPIO13</text>
+    <text x="258" y="115">GPIO12</text>
+    <text x="258" y="145">GPIO3</text>
+    <text x="258" y="175">GPIO1</text>
+    <text x="258" y="205">GND</text>
+    <text x="258" y="245">BAT 3.0–4.2 V</text>
+  </g>
+
+  <!-- Supply capacitors across GND and Vin at each amp -->
+  <g>
+    <path class="wire c-gnd" d="M580 220 V231 M572 231 H588 M580 480 V491 M572 491 H588"/>
+    <path class="wire c-bat" d="M580 248 V237 M572 237 H588 M580 508 V497 M572 497 H588"/>
+    <circle class="f-gnd" cx="580" cy="220" r="4"/>
+    <circle class="f-bat" cx="580" cy="248" r="4"/>
+    <circle class="f-gnd" cx="580" cy="480" r="4"/>
+    <circle class="f-bat" cx="580" cy="508" r="4"/>
+  </g>
+  <text class="small" x="518" y="238">220 µF</text>
+  <text class="small" x="518" y="498">220 µF</text>
+  <text class="small" x="590" y="244">+</text>
+  <text class="small" x="590" y="504">+</text>
+
+  <!-- Amplifier, left pod -->
+  <rect class="box" x="600" y="40" width="130" height="230" rx="6"/>
+  <text class="title" x="612" y="62">Amp · left pod</text>
+  <g class="pin">
+    <text x="608" y="84">LRC</text><text x="608" y="112">BCLK</text><text x="608" y="140">DIN</text>
+    <text x="608" y="168">GAIN</text><text x="608" y="196">SD</text><text x="608" y="224">GND</text><text x="608" y="252">Vin</text>
+  </g>
+  <text class="small" x="652" y="168">open</text>
+  <g class="pin" text-anchor="end"><text x="724" y="124">+</text><text x="724" y="184">−</text></g>
+  <path class="wire c-spk" d="M730 120 H800 M730 180 H770 V150 H800"/>
+
+  <!-- Amplifier, right pod -->
+  <rect class="box" x="600" y="300" width="130" height="230" rx="6"/>
+  <text class="title" x="612" y="322">Amp · right pod</text>
+  <g class="pin">
+    <text x="608" y="344">LRC</text><text x="608" y="372">BCLK</text><text x="608" y="400">DIN</text>
+    <text x="608" y="428">GAIN</text><text x="608" y="456">SD</text><text x="608" y="484">GND</text><text x="608" y="512">Vin</text>
+  </g>
+  <text class="small" x="652" y="428">open</text>
+  <g class="pin" text-anchor="end"><text x="724" y="384">+</text><text x="724" y="444">−</text></g>
+  <path class="wire c-spk" d="M730 380 H800 M730 440 H770 V410 H800"/>
+
+  <!-- Speakers -->
+  <g style="fill: #ffffff; stroke: #18211f; stroke-width: 1.5">
+    <rect x="800" y="110" width="16" height="50"/>
+    <path d="M816 110 L850 86 V184 L816 160 Z"/>
+    <rect x="800" y="370" width="16" height="50"/>
+    <path d="M816 370 L850 346 V444 L816 420 Z"/>
+  </g>
+  <text class="small" x="796" y="208">speaker 4 Ω</text>
+  <text class="small" x="796" y="468">speaker 4 Ω</text>
+  <text class="small" x="742" y="114">+</text>
+  <text class="small" x="742" y="374">+</text>
+
+  <!-- USB-C breakout -->
+  <path class="wire c-usb" d="M250 300 H290 V590 H600"/>
+  <path class="wire c-gnd" d="M250 330 H270 V615 H600"/>
+  <rect class="box" x="600" y="560" width="170" height="80" rx="6"/>
+  <text class="title" x="612" y="582">USB-C breakout</text>
+  <g class="pin"><text x="608" y="594" dy="4">VBUS</text><text x="608" y="619" dy="4">GND</text></g>
+  <text class="small" x="690" y="619" dy="4">5.1 kΩ on CC</text>
+  <text class="small" x="300" y="584">5V · the charging current</text>
+</svg>
