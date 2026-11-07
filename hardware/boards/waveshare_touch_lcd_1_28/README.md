@@ -31,6 +31,7 @@ The whole housing turns as it's screwed in, so how it ends up sitting depends on
 - `msa_housing.scad` - The design, in [OpenSCAD](https://openscad.org/).  All of the dimensions are named settings at the top.  Its preview shows the board, the battery, and the mask's filter mount in red.
 - `board.scad` - The boards' dimensions.  Set `board` to `"rp2040"` or `"rp2350"` here.
 - `render.sh` - Renders all of the parts to STL files in `stl/`.
+- `travel_case/` - A hinged case to carry the housing in, with the board in it.
 
 ## Parts
 
@@ -71,10 +72,14 @@ The boards charge their battery at 1 A, which is more than a 250-310 mAh LiPo is
 
 To flash new firmware without taking it apart, plug the USB-C cable in and run `picotool load -f -x rcat-msa-lcd.uf2`.  The `-f` reboots the board into its programming mode itself, so you don't have to reach the BOOT button.
 
+## Travel case
+
+There's a hinged case to carry the housing in, in [`travel_case`](travel_case/).
+
 ## Credits and License
 
 The voice port thread is from [RP2040-LCD-1.28-MSA](https://www.printables.com/model/538771-rp2040-lcd-128-msa) by whyrlpool, which adapted it from the [Gas Mask VPU Cover (MSA compatible)](https://cults3d.com/en/3d-model/various/gas-mask-vpu-cover-msa-compatible).
 
-Like the design it's from, everything in this folder is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).  This is separate from the license of the rest of the repository.
+Like the design it's from, everything in this folder (apart from the travel case, which has its own license) is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).  This is separate from the license of the rest of the repository.
 
 Board dimensions come from Waveshare's 3D models of the RP2040-Touch-LCD-1.28 and RP2350-Touch-LCD-1.28.

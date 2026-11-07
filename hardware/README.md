@@ -8,7 +8,7 @@
 |---|---|---|---|
 | [Waveshare ESP32-S3-Touch-LCD-1.46](boards/waveshare_esp32s3_touch_lcd_1_46/) (with cover glass) | Yes | Simple housing; speaker housing with two speakers | J9 header adapter PCB, travel case |
 | [Waveshare ESP32-S3-Touch-AMOLED-1.75](boards/waveshare_esp32s3_touch_amoled_1_75/) | Yes (not yet tested on the board) | Speaker housing with one speaker below the display (draft, not yet printed) | |
-| [Waveshare RP2040-Touch-LCD-1.28 and RP2350-Touch-LCD-1.28](boards/waveshare_touch_lcd_1_28/) | Yes | Housing with the battery and a switch inside (draft, not yet printed) | |
+| [Waveshare RP2040-Touch-LCD-1.28 and RP2350-Touch-LCD-1.28](boards/waveshare_touch_lcd_1_28/) | Yes | Housing with the battery and a switch inside (draft, not yet printed) | Travel case |
 
 ## How it's organized
 
@@ -44,4 +44,4 @@ Make `masks/<mask>/` with its port's thread and the shape of the mask around the
 
 ## Licenses
 
-The housings are based on whyrlpool's 1.28" design, and like it, everything here is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/), unless its folder says otherwise.  The 1.46" travel case is under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/).  Both are separate from the license of the rest of the repository.
+The housings are based on whyrlpool's 1.28" design, and like it, everything here is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/), unless its folder says otherwise.  The travel cases are under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/).  Both are separate from the license of the rest of the repository.
