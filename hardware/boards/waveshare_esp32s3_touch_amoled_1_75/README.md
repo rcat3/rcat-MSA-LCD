@@ -9,7 +9,7 @@ The board has its own amplifier, speaker socket, microphones and battery charger
 ## How it goes together
 
 - The board sits in a cup at the front, with its glass flush with the front, and screws to the cup's back plate with three M2 countersunk screws (about M2 x 5) into the standoffs on its back.
-- It's turned a quarter turn from its usual way up, so its USB-C port faces right, out through the side of the housing, where a cable plugs straight in.  Its side buttons and micro SD slot are on the left, and its pin header is at the top.  Set the display's rotation to match in the settings.
+- It's turned a quarter turn from its usual way up, so its USB-C port faces right, out through the side of the housing.  The port is in a pocket in the side, only about 3 mm behind the pocket's floor, so any cable's plug reaches it, not just the slimmest.  Its side buttons and micro SD slot are on the left, and its pin header is at the top.  Set the display's rotation to match in the settings.
 - The speaker sits in a shallow pod below the display.  Right below the voice port is the mask's filter mount, so the pod is only as deep as the speaker needs, and the **chin** behind it slopes back to the body, over the mount.  From the scan, the chin clears the mount by about 4.7 mm at its closest, at the mount's top edge, and the pod by about 8 mm.
 - The speaker goes in from the back of the pod before the chin goes on, and the adhesive frame on its front sticks it to the grille.  Its wire runs in a 2 mm gap behind it, into the chamber, to the board's speaker socket.
 - The chamber behind the board holds a 2000 mAh battery, taped to the back.  The board's speaker and battery sockets stand up off the back of the board, and their plugs go in through openings in the back plate, from the chamber.
@@ -31,6 +31,7 @@ Run `./render.sh` in this folder to render every part to the `stl/` folder, or `
 - **`back`** - Closes the chamber, with the posts the collar turns on.  Use 4 or more walls so the posts are solid.
 - **`collar`**, **`washer`** and **`gasket`** - The turning collar, as on the 1.46" speaker housing.
 - **`plungers`** - Two pins that press the board's side buttons through the wall.
+- **`usb_plug`** - Covers the USB-C port when it's not in use, flush with the outside of the housing.  A tongue on its back pushes into the slot for the plug, and the notch at its top edge is for a fingernail to pull it out.  It's a tight push fit, best printed in TPU.  In PLA or PETG, loosen it with the second number in `usb_tongue` if it's too tight.
 - **`pod_test`** - The pod on its own, to check the speaker's fit and hear how it sounds.
 - **`lens_fit`** - The front 3 mm of the body around the display.  The glass should drop in with a little play, but not rattle.  Adjust `clearance` if it doesn't.
 - **`plunger_test`** - Plungers in three lengths, two of each, standing 1.3, 1.8 and 2.3 mm out of the housing.  Set `plunger_proud` to the one that works best.

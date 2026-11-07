@@ -18,6 +18,10 @@
 //  - collar, washer and gasket: the voice port thread, which turns freely on
 //    the back, so the housing can be held level while only the collar is
 //    screwed in. They're in hardware/masks/msa_millennium/turning_collar.scad.
+//  - usb_plug: fills the pocket around the USB-C port when it's not in use,
+//    flush with the outside. A tongue on its back pushes into the slot for
+//    the plug, and a notch at its top edge is for a fingernail to pull it
+//    out.
 //  - plungers: two pins that press the board's side buttons through the
 //    thick wall on the left. Each goes in from inside the display's pocket
 //    before the board, and a flange on its inner end keeps it from falling
@@ -41,7 +45,7 @@
 //   openscad -D 'part="body"' -o body.stl msa_speaker_housing.scad
 
 part = "preview";           // "preview", "body", "chin", "back", "collar", "washer", "gasket", "plungers",
-                            // "plunger_test", "pod_test", "lens_fit" or "layout"
+                            // "usb_plug", "plunger_test", "pod_test", "lens_fit" or "layout"
 
 include <board.scad>
 include <../../masks/msa_millennium/turning_collar.scad>
@@ -78,6 +82,9 @@ front_round = 4.0;          // rounds the front edge of the body
 bezel_step = 1.0;           // the ring around the display stands this far proud of the face
 bezel_chamfer = 0.5;        // on the outside of the ring
 chin_foot = 1.5;            // the chin's sloped underside meets the back this far below the body
+usb_floor = [20, 26.5];     // width, and distance from the center: the chamber stops here under the
+                            // pocket around the USB-C port, so the pocket has a solid floor. The
+                            // battery's edge is at 25.75
 
 /* [Side buttons: plungers through the wall] */
 plunger_d = 3.6;
@@ -88,6 +95,12 @@ plunger_tip = 3.0;          // diameter of the end that presses the button
 nub_gap = 0.1;              // between the plunger and its button
 plunger_proud = 1.8;        // how far it stands out of the housing
 plunger_test = [1.3, 1.8, 2.3];     // how far the "plunger_test" plungers stand out, two of each
+
+/* [USB-C cover plug] */
+usb_plug_clear = 0.15;      // around the plug in its pocket
+usb_tongue = [1.8, 0.05];   // how far the tongue reaches into the slot, and its clearance in it.
+                            // It's a tight push fit; print the plug in TPU, or loosen this in PLA
+usb_plug_notch = [6, 1.2, 1.5];     // the fingernail notch: width, depth, height
 
 /* [Grille] */
 grille_t = 1.6;
@@ -177,6 +190,7 @@ module chamber_2d()
     {
         circle(r = body_r - body_wall, $fn = 192);
         bosses_2d();
+        if (usb_access) rotate(board_rot) translate([-usb_floor[0] / 2, -body_r]) square([usb_floor[0], body_r - usb_floor[1]]);
     }
 }
 
@@ -284,6 +298,29 @@ module chin()
             translate([0, 0, z_back - 1]) cylinder(d = screw_clear, h = chin_h + 2, $fn = 16);
             translate([0, 0, z_back - 1]) cylinder(d = screw_head[0], h = chin_h + 1 - chin_screw_grip, $fn = 32);
         }
+    }
+}
+
+// Fills the pocket around the USB-C port, with its outside following the
+// body's
+module usb_plug()
+{
+    c = usb_plug_clear;
+    difference()
+    {
+        union()
+        {
+            intersection()
+            {
+                rotate([0, 0, board_rot]) at_bottom_edge(-usb_recess_r - c, -body_r - 2) usb_recess_2d(-c);
+                rounded_prism(z_back, z_face, edge_chamfer, front_round) circle(r = body_r, $fn = 192);
+            }
+            rotate([0, 0, board_rot])
+                at_bottom_edge(-usb_recess_r + usb_tongue[0], -usb_recess_r - c - 0.01) usb_slot_2d(-usb_tongue[1]);
+        }
+        rotate([0, 0, board_rot])
+            translate([-usb_plug_notch[0] / 2, -body_r - 1, usb_recess_z[1] - c - usb_plug_notch[2]])
+                cube([usb_plug_notch[0], 1 + usb_plug_notch[1], usb_plug_notch[2] + 1]);
     }
 }
 
@@ -421,6 +458,7 @@ if (part == "preview")
     color("gray") back();
     color("dimgray") collar();
     color("silver") washer();
+    color("gray") usb_plug();
     color("midnightblue") translate([0, 0, -lens_t]) cylinder(d = lens_d, h = lens_t);
     color("red", 0.4) translate([0, 0, z_grip]) mask_keepout();
 }
@@ -429,6 +467,8 @@ else if (part == "layout") layout();
 else if (part == "body") translate([0, 0, -z_back]) body();
 // Printed on the face that meets the pod, with the slope facing up
 else if (part == "chin") rotate([180, 0, 0]) translate([0, 0, -z_pod_back]) chin();
+// Printed standing on its flat bottom face
+else if (part == "usb_plug") translate([0, 0, -usb_recess_z[0] - usb_plug_clear]) usb_plug();
 else if (part == "plungers") for (i = [0, 1]) translate([i * 8, 0, 0]) plunger();
 else if (part == "plunger_test")
     for (i = [0 : len(plunger_test) - 1], j = [0, 1]) translate([i * 8, j * 8, 0]) plunger(plunger_test[i]);

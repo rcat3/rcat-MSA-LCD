@@ -59,6 +59,10 @@ usb_access = true;                  // the board charges at 300 mA unless the fi
                                     // which is safe for any battery that fits, so the port is open
 usb_opening = [12.4, 6.6];          // width, height of the slot for the USB-C plug. The plug's
                                     // overmold has to fit into it to plug in all the way
+usb_recess_w = 16.0;                // a pocket in the outside of the housing around the slot, so the
+usb_recess_z = [-11.9, -3.5];       // port is only usb_recess_r - usb_port_front behind the surface
+usb_recess_r = 26.68;               // and any cable reaches it. It stops just short of the chamber
+usb_recess_round = 2.0;             // behind the back plate
 sd_access = true;
 sd_opening = [14.0, 3.4];           // width, height of the slot for the micro SD card
 
@@ -89,17 +93,40 @@ module plate_holes()
     for (m = mic_xy) translate([m[0], m[1], plate_back - 1]) cylinder(d = mic_hole, h = plate_t + 2, $fn = 24);
 }
 
+// The slot for the USB-C plug and the pocket around it, seen from outside the
+// bottom edge, with y the height (z), grown by grow all round
+module usb_slot_2d(grow = 0)
+{
+    hull()
+        for (s = [-1, 1])
+            translate([s * (usb_opening[0] - usb_opening[1]) / 2, (usb_z[0] + usb_z[1]) / 2])
+                circle(d = usb_opening[1] + 2 * grow, $fn = 48);
+}
+
+module usb_recess_2d(grow = 0)
+{
+    offset(r = usb_recess_round + grow) offset(delta = -usb_recess_round)
+        translate([-usb_recess_w / 2, usb_recess_z[0]])
+            square([usb_recess_w, usb_recess_z[1] - usb_recess_z[0]]);
+}
+
+// Extrudes a 2D shape seen from outside the bottom edge outwards (towards -y),
+// from y = y0 to y = y1
+module at_bottom_edge(y0, y1)
+{
+    translate([0, y0, 0]) rotate([90, 0, 0]) linear_extrude(y0 - y1) children();
+}
+
 // Openings in the side wall. They reach well past the outside of the cup, so
 // they also go through a thicker wall.
 module wall_openings()
 {
-    // USB-C at the bottom: a rounded slot around the port
-    if (usb_access) translate([0, -cup_ir + 3, (usb_z[0] + usb_z[1]) / 2])
-        rotate([90, 0, 0])
-            hull()
-                for (s = [-1, 1])
-                    translate([s * (usb_opening[0] - usb_opening[1]) / 2, 0, 0])
-                        cylinder(d = usb_opening[1], h = 30, $fn = 48);
+    // USB-C at the bottom: a rounded slot around the port, in a pocket
+    if (usb_access)
+    {
+        at_bottom_edge(-cup_ir + 3, -cup_ir - 30) usb_slot_2d();
+        at_bottom_edge(-usb_recess_r, -usb_recess_r - 30) usb_recess_2d();
+    }
     // Micro SD slot at the top
     if (sd_access)
         translate([(sd_x[0] + sd_x[1]) / 2 + sd_shift[0] - sd_opening[0] / 2, cup_ir - 3,

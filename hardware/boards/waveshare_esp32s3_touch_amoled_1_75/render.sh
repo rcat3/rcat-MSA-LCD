@@ -11,6 +11,6 @@
 cd "$(dirname "$0")"
 
 SCAD=msa_speaker_housing.scad
-ALL_PARTS=(body chin back collar washer gasket plungers pod_test plunger_test lens_fit)
+ALL_PARTS=(body chin back collar washer gasket plungers usb_plug pod_test plunger_test lens_fit)
 
 source ../../common/render_parts.sh
