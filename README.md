@@ -17,19 +17,9 @@ The two 1.28" boards are the ones used in the MSA mask build described next.
 
 ### MSA Mask Build (1.28" boards)
 
-#### 3D Print Models
+There's a 3D printable housing for both 1.28" boards in [`hardware/boards/waveshare_touch_lcd_1_28`](hardware/boards/waveshare_touch_lcd_1_28/).  It's two printed parts and no screws: a body with the voice port thread on its back, which holds the board, the battery and a slide switch to turn it off, and a bezel that snaps on over the front.  Its README has the parts to buy and how it goes together.  It's a new design that hasn't been printed yet.
 
-The 3D model files can be found at [this link](https://www.printables.com/model/538771-rp2040-lcd-128-msa).  I don't think I used the pieces as the original author intended.  Therefore, not all of the pieces were used.  I recommend printing the pieces in `light v23.stl` and `vpu_threaded.3mf`.  I ended up drilling a 1/4" hole through the threaded piece so that I could mount a switch to conveniently disconnect battery power.
-
-#### Bill of Materials
-
-Other things you'll need:
-- [Waveshare RP2040-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0C4LRRVVN) *OR* [Waveshare RP2350-Touch-LCD-1.28 LCD Display](https://www.amazon.com/dp/B0DLBF5QKK)
-- [3.7V 310mAh 502030 Lithium Polymer Battery](https://www.amazon.com/dp/B08TBY5BFL) : It's more common to find this battery size in 250mAh.  You can get a 250mAh battery if this one is not available.  **Note: If you get the battery at this link, the connector polarity is opposite of what the RP2040 wants.  You'll need to switch the + and - wires around in the connector or solder on a new connector.  Do not connect to the RP2040 until you've done this!**
-- [JST 1.25mm 2 pin connector cables with male and female connectors](https://www.amazon.com/dp/B013JRWCBU)
-- [WMYCONGCONG Latching Push Button Switch](https://www.amazon.com/dp/B07BMNYJ13)
-- M2 heat set inserts
-- M2x16mm screws
+It replaces the [RP2040-LCD-1.28-MSA](https://www.printables.com/model/538771-rp2040-lcd-128-msa) model by whyrlpool, which this project started out with, and whose voice port thread it uses.
 
 ## Using the Display
 

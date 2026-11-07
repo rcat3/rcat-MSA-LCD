@@ -8,7 +8,7 @@
 |---|---|---|---|
 | [Waveshare ESP32-S3-Touch-LCD-1.46](boards/waveshare_esp32s3_touch_lcd_1_46/) (with cover glass) | Yes | Simple housing; speaker housing with two speakers | J9 header adapter PCB, travel case |
 | [Waveshare ESP32-S3-Touch-AMOLED-1.75](boards/waveshare_esp32s3_touch_amoled_1_75/) | Yes (not yet tested on the board) | Speaker housing with one speaker below the display (draft, not yet printed) | |
-| Waveshare RP2040 / RP2350 Touch LCD 1.28 | Yes | [RP2040-LCD-1.28-MSA](https://www.printables.com/model/538771-rp2040-lcd-128-msa) by whyrlpool (not in this repository) | |
+| [Waveshare RP2040-Touch-LCD-1.28 and RP2350-Touch-LCD-1.28](boards/waveshare_touch_lcd_1_28/) | Yes | Housing with the battery and a switch inside (draft, not yet printed) | |
 
 ## How it's organized
 
@@ -22,7 +22,7 @@ hardware/
   common/               shape helpers and the render script the boards share
 ```
 
-The board folders have the same names as the firmware's board folders in `platforms/*/boards/`, so it's easy to find both halves of a board.  Inside one:
+The board folders have the same names as the firmware's board folders in `platforms/*/boards/`, so it's easy to find both halves of a board.  The two 1.28" boards share one folder, as they share `platforms/pico/boards/touch_lcd_1_28/` in the firmware, with a setting to pick between them.  Inside one:
 
 - `board.scad` - The board's dimensions, in the coordinates of the maker's 3D model: the front of the glass at z = 0, the board towards -z, and x/y seen from the front with the USB port at the bottom.  Every housing for the board includes it.
 - `<mask>_<kind>.scad` - A housing, named for the mask it fits and what it is, such as `msa_speaker_housing.scad`.  Each has a `part` setting that picks which part to render.
